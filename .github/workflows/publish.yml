@@ -1,0 +1,24 @@
+name: Publish Package
+
+on:
+  release:
+    # Trigger this workflow when a new release is created in GitHub
+    types: [ created ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        # Configure npm to publish to the public npm registry
+        registry-url: https://registry.npmjs.org
+    - run: yarn install
+    - run: yarn build
+    # Publish the package to npm
+    # NODE_AUTH_TOKEN must be set in GitHub repository secrets
+    - run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
