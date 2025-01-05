@@ -1,6 +1,7 @@
 // src/types/proxy.ts
 export interface ProxyEvent {
     id: string;
+    projectId: string
     timestamp: number;
     method: string;
     path: string;

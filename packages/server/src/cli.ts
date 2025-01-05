@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { program } from 'commander';
-import { startServer } from './index';
+import { startServer } from './index.js';
 
 program
   .name('dev-proxy')
