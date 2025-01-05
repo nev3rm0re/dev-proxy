@@ -1,6 +1,6 @@
 // packages/server/src/proxy/index.ts
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
-import { Request, Response, NextFunction } from 'express';
+import { Request } from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
 import { Socket } from 'net';
 import { storage } from '../storage';
@@ -9,6 +9,8 @@ import { ProxyEvent } from '../types';
 
 export function createProxyHandler(wsManager: WebSocketManager): RequestHandler {
   return createProxyMiddleware({
+    // Determines target URL for each request
+    // Lifecycle: Called first when request is received
     router: async (req: IncomingMessage) => {
       const urlPath = (req as Request).originalUrl || req.url || '/';
       const [projectId] = urlPath.split('/').filter(Boolean);
@@ -21,16 +23,27 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       
       return project.targetUrl;
     },
+
+    // Rewrites the path by removing the project ID prefix
+    // Lifecycle: Called after router, before request is proxied
     pathRewrite: (path) => {
       const parts = path.split('/').filter(Boolean);
       return '/' + parts.slice(1).join('/');
     },
+
+    // Changes the origin of the host header to the target URL
+    // Lifecycle: Applied to all proxied requests
     changeOrigin: true,
     on: {
-      proxyReq: (proxyReq, req: IncomingMessage, res) => {
+      // Called just before the request is sent to the target
+      // Lifecycle: After path rewrite, before sending to target
+      proxyReq: (_, req: IncomingMessage) => {
         (req as any).startTime = Date.now();
       },
-      proxyRes: (proxyRes, req: IncomingMessage, res) => {
+
+      // Called when response is received from target
+      // Lifecycle: After target responds, before sending back to client
+      proxyRes: (proxyRes, req: IncomingMessage) => {
         const startTime = (req as any).startTime;
         const urlPath = (req as Request).originalUrl || req.url || '/';
         const [projectId, ...pathParts] = urlPath.split('/').filter(Boolean);
@@ -58,6 +71,9 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
           wsManager.broadcast(proxyEvent);
         });
       },
+
+      // Called when any error occurs during proxying
+      // Lifecycle: Can occur at any point during the proxy process
       error: (err: Error, req: IncomingMessage, res: ServerResponse | Socket) => {
         console.error('Proxy error:', err);
         if (res instanceof ServerResponse) {

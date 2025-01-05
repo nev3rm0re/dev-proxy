@@ -1,8 +1,8 @@
 // packages/server/src/index.ts
 import express from 'express';
 import { createServer } from 'http';
-import { WebSocketManager } from './websocket.ts';
-import { createProxyHandler } from './proxy.ts';
+import { WebSocketManager } from './websocket';
+import { createProxyHandler } from './proxy';
 
 interface ServerOptions {
   port?: number;
@@ -49,4 +49,4 @@ export function startServer(options: ServerOptions = {}) {
 }
 
 // Export for direct use if needed
-export { WebSocketManager } from './websocket.ts';
+export { WebSocketManager } from './websocket';
