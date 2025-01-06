@@ -11,6 +11,8 @@ export interface ProxyEvent {
     responseHeaders: Record<string, string>;
     responseBody: any;
     duration: number;
+    isLocked: boolean;
+    hits: number;
   }
   
   export interface ProxyState {

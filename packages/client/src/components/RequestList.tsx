@@ -11,6 +11,7 @@ export const RequestList = () => {
           <div className="col-span-2">Path</div>
           <div className="flex justify-between">
             <span>Time</span>
+            <span>Hits</span>
             <span>Status</span>
           </div>
         </div>
@@ -32,8 +33,9 @@ export const RequestList = () => {
                 <span className="text-gray-400 text-sm">
                   {new Date(event.timestamp).toLocaleTimeString()}
                 </span>
+                <span className="text-gray-400 text-sm">{event.hits}</span>
                 <button className="text-gray-400 hover:text-gray-200">
-                  { true ? <LockOpen size={16} /> : <Lock size={16} /> }
+                  { event.isLocked ? <LockOpen size={16} /> : <Lock size={16} /> }
                 </button>
               </div>
             </div>

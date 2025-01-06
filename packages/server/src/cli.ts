@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { program } from 'commander';
-import { startServer } from './index.js';
-
+import { startServer } from './index';
+import path from 'path';
 program
   .name('dev-proxy')
   .description('Development proxy server for API monitoring')
   .version('0.1.0')
   .option('-p, --port <number>', 'port to run on', '3000')
-  .option('-s, --storage <path>', 'storage file path', './dev-proxy-storage.json');
+  .option('-s, --storage <path>', 'storage file path', './proxyDB.json');
 
 program.parse();
 
@@ -19,4 +19,4 @@ startServer({
 });
 
 console.log(`Dev Proxy running on port ${options.port}`);
-console.log(`Storage file: ${options.storage}`);
+console.log(`Storage file: ${path.resolve(options.storage)}`);

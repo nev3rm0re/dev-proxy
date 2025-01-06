@@ -3,6 +3,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketManager } from './websocket';
 import { createProxyHandler } from './proxy';
+import apiRouter from './routes/api';
 
 interface ServerOptions {
   port?: number;
@@ -15,6 +16,8 @@ export function startServer(options: ServerOptions = {}) {
   const wsManager = new WebSocketManager(server);
 
   app.use(express.json());
+  // API Routes - would not be caught by proxy middleware
+  app.use('/api', apiRouter);
 
   // Error handling middleware
   app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
