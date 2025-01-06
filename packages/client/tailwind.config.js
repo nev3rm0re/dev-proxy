@@ -17,6 +17,21 @@ module.exports = {
   		}
   	},
   	extend: {
+		  keyframes: {
+			'pulse-gradient': {
+				'0%, 100%': {
+					background: 'radial-gradient(ellipse at center, #ffd700 0%, transparent 70%)',
+					opacity: '0.5'
+				},
+				'50%': {
+					background: 'radial-gradient(ellipse at center, #ffd700 0%, transparent 70%)',
+					opacity: '1'
+				}
+			}
+		},
+		animation: {
+			'pulse-gradient': 'pulse-gradient .3s ease-in-out 1'
+		},
   		colors: {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',

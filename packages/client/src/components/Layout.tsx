@@ -6,7 +6,7 @@ import { useEffect } from "react";
 export const Layout = () => {
     const wsUrl = "ws://localhost:3000";
     const { isConnected } = useWebSocket(wsUrl);
-    const { events, setEvents } = useProxyStore();
+    const { events, setEvents, incomingEventId } = useProxyStore();
 
     useEffect(() => {
         // Make an api call to get the initial events
@@ -18,6 +18,15 @@ export const Layout = () => {
         fetchEvents();
     }, []);
 
+    const handleLockEvent = async (eventId: string) => {
+        try {
+            await fetch(`http://localhost:3000/api/events/${eventId}/lock`, {
+                method: 'POST',
+            });
+        } catch (error) {
+            console.error('Failed to lock event:', error);
+        }
+    };
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -30,7 +39,8 @@ export const Layout = () => {
             <div className="flex-1">
                 <RequestList
                     events={events} 
-                    onLockEvent={() => { }} 
+                    incomingEventId={incomingEventId}
+                    onLockEvent={handleLockEvent}
                     onLockResponse={() => { }} 
                     onEditResponse={() => { }} 
                 />

@@ -1,7 +1,7 @@
 // packages/server/src/storage/index.ts
 import { JsonDB, Config } from 'node-json-db';
 import { ProjectConfig, ProxyEvent, Route, Response } from '../types';
-import { IncomingMessage } from 'http';
+import { IncomingMessage, request } from 'http';
 
 export class StorageManager {
   private db: JsonDB;
@@ -13,39 +13,55 @@ export class StorageManager {
 
   private async init() {
     try {
-      await this.db.getData('/projects');
+      await this.db.getData('/routes');
     } catch {
-      await this.db.push('/projects', {});
+      await this.db.push('/routes', {});
     }
   }
 
-  async getProjects(): Promise<ProjectConfig[]> {
-    return await this.db.getData('/projects');
+  async setRoutes(path: string, data: any): Promise<void> {
+    await this.db.push(path, data);
   }
-  
-  async createProject(projectId: string): Promise<ProjectConfig> {
-    const project: ProjectConfig = {
-      id: projectId,
-      routes: []
-    };
-    
-    await this.saveProject(project);
-    return project;
+
+  async createRoute(data: Omit<Route, 'id'>): Promise<Route | null> {
+    const shortId = this.shortId(data.method, data.path);
+    return await this.saveRoute({ id: shortId, ...data });
   }
-  
-  async createProjectFromRequest(projectId: string, req: IncomingMessage): Promise<ProjectConfig> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      return await this.createProject(projectId);
+
+  async saveRoute(data: Route): Promise<Route | null> {
+    try {
+      await this.db.push(`/routes/${data.id}`, data);
+      return await this.getRoute(data.id);
+    } catch (error) {
+      console.error('Error saving route', error);
+      return null;
     }
-    project.routes.push({
-      method: req.method || 'GET',
-      path: req.url || '/',
+  }
+
+  async getRoute(shortId: string): Promise<Route | null> {
+    return await this.db.getData(`/routes/${shortId}`);
+  }
+
+  async getRouteByUrlMethod(urlPath: string, method: string): Promise<Route | null> {
+    const shortId = this.shortId(method, urlPath);
+    try {
+      return await this.getRoute(`${shortId}`);
+    } catch (error) {
+      console.log('Route not found', shortId, error);
+      return null;
+    }
+  }
+
+  async createRouteFromRequest({ method, path, hostname }: { method: string, path: string, hostname: string}): Promise<Route | null> {
+    const route: Omit<Route, 'id'> = {
+      method,
+      path,
+      hostname,
       responses: [],
       isLocked: false,
       hits: 1
-    });
-    return project;
+    };
+    return await this.createRoute(route);
   }
 
   async getProject(id: string): Promise<ProjectConfig | null> {
@@ -55,75 +71,49 @@ export class StorageManager {
       return null;
     }
   }
-  
+
   async saveProject(config: ProjectConfig): Promise<void> {
     await this.db.push(`/projects/${config.id}`, config);
   }
 
-  async findRequest(projectId: string, path: string, method: string): Promise<Route | null> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      return null;
-    }
-    return project.routes.find(r => r.method === method && r.path === path) || null;
+  async findRequest(path: string, method: string): Promise<Route | null> {
+    const routes = await this.getRoutes();
+    return routes.find(r => r.method === method && r.path === path) || null;
   }
 
   async updateRequest(projectId: string, request: Route): Promise<void> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      return;
-    }
-    const route = project.routes.find(r => r.method === request.method && r.path === request.path);
+    const routes = await this.getRoutes();
+    const route = routes.find(r => r.method === request.method && r.path === request.path);
     if (route) {
       route.hits = request.hits;
-      await this.saveProject(project);
+      await this.saveRoute(route);
     }
   }
 
-  async findLastResponse(projectId: string, path: string, method: string): Promise<Response | null> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      return null;
-    }
-    const request = await this.findRequest(projectId, path, method);
-    return request?.responses[0] || null;
+  async findLastResponse(path: string, method: string): Promise<Response | null> {
+    const route = await this.getRouteByUrlMethod(path, method);
+    return route?.responses[0] || null;
   }
 
-  async findRandomResponse(projectId: string, path: string, method: string): Promise<Response | null> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      return null;
-    }
-    const request = await this.findRequest(projectId, path, method);
-    return request?.responses[Math.floor(Math.random() * request.responses.length)] || null;
+  async findRandomResponse(path: string, method: string): Promise<Response | null> {
+    const route = await this.getRouteByUrlMethod(path, method);
+    return route?.responses[Math.floor(Math.random() * route.responses.length)] || null;
   }
 
   async getRoutes(): Promise<Route[]> {
     try {
-      const projects = await this.getProjects();
-      // flatten all projects routes into single array and inject projectId
-      const routes = Object.entries(projects).flatMap(([projectId, project]) => 
-        project.routes.map(route => ({
-          ...route,
-          projectId
-        }))
-      );
-      return routes;
+      return await this.db.getData('/routes');
     } catch (error) {
       console.error('Error getting routes', error);
       return [];
     }
   }
-  
+
   async addRouteResponse(
-    projectId: string,
+    route: Route,
     proxyEvent: ProxyEvent,
     lockRoute?: boolean
   ): Promise<void> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      throw new Error(`Project ${projectId} not found`);
-    }
 
     const normalizedResponse = {
       headers: proxyEvent.responseHeaders,
@@ -132,22 +122,11 @@ export class StorageManager {
       count: 1
     };
 
-    const route = project.routes.find(r => r.method === proxyEvent.method && r.path === proxyEvent.path);
-    if (route) {
-      route.hits++;
-      route.isLocked = lockRoute || false;
-      route.responses.push(normalizedResponse);
-    } else {
-      project.routes.push({
-        method: proxyEvent.method,
-        path: proxyEvent.path,
-        responses: [normalizedResponse],
-        isLocked: lockRoute || false,
-        hits: 1
-      });
-    }
+    route.hits++;
+    route.isLocked = lockRoute || false;
+    route.responses.push(normalizedResponse);
 
-    await this.saveProject(project);
+    await this.saveRoute(route);
   }
 
   async lockRoute(routeId: string): Promise<void> {
@@ -157,77 +136,38 @@ export class StorageManager {
     if (!route) {
       throw new Error(`Route ${routeId} not found`);
     }
-    
+
     route.isLocked = true;
 
     await this.saveRoute(route);
   }
 
-  async getLockedRoutes(projectId: string): Promise<Route[]> {
-    try {
-      const project = await this.getProject(projectId);
-      return project?.routes || [];
-    } catch {
-      return [];
+  private shortId(method: string, path: string): string {
+    const combined = `${method}:${path}`;
+    let hash = 0;
+    for (let i = 0; i < combined.length; i++) {
+      hash = ((hash << 5) - hash) + combined.charCodeAt(i);
+      hash = hash & hash; // Convert to 32-bit integer
     }
+    // Convert to positive number and take modulo to ensure 6 chars in base36
+    const positiveHash = Math.abs(hash);
+    const shortId = positiveHash.toString(36).padStart(6, '0').slice(-6);
+    console.log('Generated shortId for', method, path, shortId);
+    return shortId;
   }
 
-
-
-
-  async incrementResponseCount(projectId: string, method: string, path: string, responseIndex: number): Promise<void> {
+  // Helper method to get route by short ID
+  async getRouteByShortId(projectId: string, shortId: string): Promise<Route | null> {
     const project = await this.getProject(projectId);
-    if (!project) {
-      throw new Error(`Project ${projectId} not found`);
+    if (!project) return null;
+
+    for (const route of project.routes) {
+      const routeShortId = this.shortId(route.method, route.path);
+      if (routeShortId === shortId) {
+        return route;
+      }
     }
-
-    const route = project.routes.find(r => r.method === method && r.path === path);
-    if (route?.responses[responseIndex]) {
-      route.responses[responseIndex].count++;
-      await this.saveProject(project);
-    }
-  }
-
-  async setRouteLock(projectId: string, method: string, path: string, isLocked: boolean, lockedResponseIndex?: number): Promise<void> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      throw new Error(`Project ${projectId} not found`);
-    }
-
-    const route = project.routes.find(r => r.method === method && r.path === path);
-    if (!route) {
-      throw new Error(`Route ${method} ${path} not found`);
-    }
-
-    route.isLocked = isLocked;
-    route.lockedResponseIndex = isLocked ? lockedResponseIndex : undefined;
-    
-    await this.saveProject(project);
-  }
-
-  async setCustomResponse(projectId: string, method: string, path: string, response: Omit<Response, 'count'>): Promise<void> {
-    const project = await this.getProject(projectId);
-    if (!project) {
-      throw new Error(`Project ${projectId} not found`);
-    }
-
-    const route = project.routes.find(r => r.method === method && r.path === path);
-    if (!route) {
-      throw new Error(`Route ${method} ${path} not found`);
-    }
-
-    const headers: Record<string, string> = {};
-    response.headers.forEach((value, key) => {
-      headers[key] = value;
-    });
-
-    route.customResponse = {
-      ...response,
-      headers,
-      count: 1
-    };
-    
-    await this.saveProject(project);
+    return null;
   }
 }
 

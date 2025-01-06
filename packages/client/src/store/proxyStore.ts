@@ -1,12 +1,14 @@
 import { create } from "zustand";
 import { ProxyState } from "../types/proxy";
 
-export const useProxyStore = create<ProxyState>()((set) => ({
+export const useProxyStore = create<ProxyState>()((set, get) => ({
   events: [],
-  selectedEventId: null,
+  incomingEventId: null,
   isConnected: false,
   addEvent: (event) => set((state) => {
-    // Check if we already have an event with same project, path and method
+    const { setIncomingEventId } = get();
+    setIncomingEventId(null);
+    
     const existingEvent = state.events.findIndex(e => 
       e.projectId === event.projectId && 
       e.path === event.path && 
@@ -14,14 +16,16 @@ export const useProxyStore = create<ProxyState>()((set) => ({
     );
     
     if (existingEvent === -1) {
+      setIncomingEventId(event.path);
       return { events: [event, ...state.events].slice(0, 100) };
     } else {
+      setIncomingEventId(state.events[existingEvent].path);
       const events = [...state.events];
       events[existingEvent].hits++;
       return { events };
     }
   }),
-  selectEvent: (id) => set({ selectedEventId: id }),
+  setIncomingEventId: (id) => set({ incomingEventId: id }),
   // Indicate that the client is connected to the server
   setConnected: (connected) => set({ isConnected: connected }),
   setEvents: (events) => set({ events }),

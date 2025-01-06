@@ -31,10 +31,10 @@ export interface ProxyEvent {
   
   export interface ProxyState {
     events: ProxyEvent[];
-    selectedEventId: string | null;
+    incomingEventId: string | null;
     isConnected: boolean;
     setEvents: (events: ProxyEvent[]) => void;
     addEvent: (event: ProxyEvent) => void;
-    selectEvent: (id: string | null) => void;
+    setIncomingEventId: (id: string | null) => void;
     setConnected: (connected: boolean) => void;
   }

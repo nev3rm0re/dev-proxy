@@ -7,7 +7,9 @@ export interface Response {
 }
 
 export interface Route {
+  id: string;
   method: string;
+  hostname: string;
   path: string;
   responses: Response[];
   isLocked: boolean;
@@ -26,7 +28,6 @@ export interface ProxyConfig {
  */
 export interface ProxyEvent {
   id: string;
-  projectId: string; // hostname
   timestamp: number; // timestamp of the request
   method: string; // http method
   path: string; // path of the request

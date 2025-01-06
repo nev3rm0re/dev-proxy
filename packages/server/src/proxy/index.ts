@@ -28,28 +28,27 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
     // Lifecycle: Called first when request is received
     router: async (req: IncomingMessage) => {
       const urlPath = (req as Request).originalUrl || req.url || '/';
-      const [projectId] = urlPath.split('/').filter(Boolean);
-      const project = await storage.getProject(projectId);
+      const [hostname] = urlPath.split('/').filter(Boolean);
       
       // Check for previous matching request
       const path = '/' + urlPath.split('/').slice(2).join('/');
       const method = (req as Request).method || 'GET';
-      const request = await storage.findRequest(projectId, path, method);
-      if (request?.isLocked) {
-        const lastResponse = await storage.findRandomResponse(projectId, path, method);
+      console.log('Getting route for', hostname, path, method);
+      const route = await storage.getRouteByUrlMethod(urlPath, method) || await storage.createRouteFromRequest({ hostname, path: urlPath, method });
+      (req as any).route = route;
+      console.log('Found route', route);
+      
+      if (route?.isLocked) {
+        const lastResponse = await storage.findRandomResponse(urlPath, method);
+        
         if (lastResponse) {
           // Attach the cached response to the request for later use
           (req as any).cachedResponse = lastResponse;
-          (req as any).foundRequest = request;
+          (req as any).foundRequest = route;
         }
       }
       
-      // Handle case when no project or target URL is found
-      if (!project) {
-        await storage.createProjectFromRequest(projectId, req);
-      }
-      
-      return `https://${projectId}`;
+      return `https://${hostname}`;
     },
 
     // Rewrites the path by removing the project ID prefix
@@ -70,7 +69,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         
         if (!cachedResponse) {
           (req as any).startTime = Date.now();
-          return;
+          return; // exit early
         }
 
         proxyReq.destroy();
@@ -81,6 +80,8 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         headers['content-length'] = Buffer.byteLength(responseBody).toString();
         res.writeHead(cachedResponse.status, headers);
         res.end(responseBody);
+
+        const route = (req as any).route;
 
         const urlPath = (req as Request).originalUrl || req.url || '/';
         const [projectId] = urlPath.split('/').filter(Boolean);
@@ -97,14 +98,12 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
           responseStatus: cachedResponse.status,
           responseBody: cachedResponse.body,
           duration: 0,
-          ...(req as any).foundRequest,
+          ...route,
         };
+        
         // increment hits
-        const request = await storage.findRequest(projectId, proxyEvent.path, proxyEvent.method);
-        if (request) {
-          request.hits++;
-          await storage.updateRequest(projectId, request);
-        }
+        route.hits++;
+        await storage.saveRoute(route);
 
         // Broadcast the cached response hit
         wsManager.broadcast(proxyEvent);
@@ -116,11 +115,12 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage) => {
         const startTime = (req as any).startTime;
         const urlPath = (req as Request).originalUrl || req.url || '/';
-        const [projectId, ...pathParts] = urlPath.split('/').filter(Boolean);
+        const [_, ...pathParts] = urlPath.split('/').filter(Boolean);
+
+        const route = (req as any).route;
 
         const proxyEvent: ProxyEvent = {
           id: Math.random().toString(36).substring(7),
-          projectId,
           timestamp: startTime,
           method: (req as Request).method || 'GET',
           path: '/' + pathParts.join('/'),
@@ -141,7 +141,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
           } catch {
             proxyEvent.responseBody = body;
           }
-          storage.addRouteResponse(projectId, proxyEvent, true);
+          storage.addRouteResponse(route, proxyEvent, true);
           wsManager.broadcast(proxyEvent);
         });
       },

@@ -7,6 +7,7 @@ import { ProxyEvent } from '@/types/proxy';
 
 interface RequestListProps {
   events: ProxyEvent[];
+  incomingEventId?: string | null;
   onLockEvent: (eventId: string) => void;
   onLockResponse: (eventId: string, responseId: string) => void;
   onEditResponse: (eventId: string, responseId: string, newBody: string) => void;
@@ -14,6 +15,7 @@ interface RequestListProps {
 
 export const RequestList: React.FC<RequestListProps> = ({ 
   events, 
+  incomingEventId,
   onLockEvent, 
   onLockResponse, 
   onEditResponse 
@@ -22,7 +24,7 @@ export const RequestList: React.FC<RequestListProps> = ({
 
   useEffect(() => {
     if (events.length > 0 && expandedPath === null) {
-    //   setExpandedPath(events[0].path);
+      setExpandedPath(events[0].path);
     }
   }, [events]);
 
@@ -49,7 +51,8 @@ export const RequestList: React.FC<RequestListProps> = ({
             <CollapsibleTrigger asChild>
               <div
                 onClick={() => handleToggleExpand(event.path)}
-                className="grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800"
+                className={`grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800
+                ${event.path === incomingEventId ? 'animate-pulse-gradient' : ''}`}
               >
                 <div className="text-gray-300 flex items-baseline w-6 mt-1">
                   {expandedPath === event.path ? 
@@ -58,7 +61,7 @@ export const RequestList: React.FC<RequestListProps> = ({
                   }
                 </div>
                 <div className="text-gray-300 truncate">
-                  {event.projectId}
+                  {event.hostname}
                   {event.path}
                 </div>
                 <div className="flex justify-between items-center gap-4">
@@ -69,12 +72,12 @@ export const RequestList: React.FC<RequestListProps> = ({
                     className="hover:bg-gray-700"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onLockEvent(event.id);
+                      onLockEvent(event.path);
                     }}
                   >
                     {event.isLocked ? 
-                      <LockOpen size={16} className="text-gray-300 hover:text-white" /> : 
-                      <Lock size={16} className="text-gray-300 hover:text-white" />
+                      <Lock size={16} className="text-gray-300 hover:text-white" /> : 
+                      <LockOpen size={16} className="text-gray-300 hover:text-white" />
                     }
                   </Button>
                 </div>
