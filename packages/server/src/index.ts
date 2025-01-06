@@ -1,6 +1,7 @@
 // packages/server/src/index.ts
 import express from 'express';
 import { createServer } from 'http';
+import cors from 'cors';
 import { WebSocketManager } from './websocket';
 import { createProxyHandler } from './proxy';
 import apiRouter from './routes/api';
@@ -15,6 +16,7 @@ export function startServer(options: ServerOptions = {}) {
   const server = createServer(app);
   const wsManager = new WebSocketManager(server);
 
+  app.use(cors());
   app.use(express.json());
   // API Routes - would not be caught by proxy middleware
   app.use('/api', apiRouter);
@@ -41,7 +43,7 @@ export function startServer(options: ServerOptions = {}) {
 
   const PORT = options.port || process.env.PORT || 3000;
   server.listen(PORT, () => {
-    console.log(`Dev Proxy server running on port ${PORT}`);
+    console.log('Listening...');
   });
 
   process.on('unhandledRejection', (reason, promise) => {

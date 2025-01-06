@@ -75,7 +75,6 @@ export class StorageManager {
     }
     const route = project.routes.find(r => r.method === request.method && r.path === request.path);
     if (route) {
-      console.log('found route, hits before', route.hits, 'hits after', request.hits);
       route.hits = request.hits;
       await this.saveProject(project);
     }
@@ -102,10 +101,16 @@ export class StorageManager {
   async getRoutes(): Promise<Route[]> {
     try {
       const projects = await this.getProjects();
-      // flatten all projects routes into single array
-      const routes = projects.flatMap(p => p.routes);
+      // flatten all projects routes into single array and inject projectId
+      const routes = Object.entries(projects).flatMap(([projectId, project]) => 
+        project.routes.map(route => ({
+          ...route,
+          projectId
+        }))
+      );
       return routes;
-    } catch {
+    } catch (error) {
+      console.error('Error getting routes', error);
       return [];
     }
   }

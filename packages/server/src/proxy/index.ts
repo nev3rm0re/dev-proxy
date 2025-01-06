@@ -67,54 +67,53 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       // Lifecycle: After path rewrite, before sending to target
       proxyReq: async (proxyReq, req: IncomingMessage, res: ServerResponse) => {
         const cachedResponse = (req as any).cachedResponse;
-        if (cachedResponse) {
-          proxyReq.destroy();
-
-          const responseBody = typeof cachedResponse.body === 'string' ? cachedResponse.body : JSON.stringify(cachedResponse.body);
-          const headers = {...cachedResponse.headers};
-          // update content-length to match responseBody length
-          headers['content-length'] = Buffer.byteLength(responseBody).toString();
-          res.writeHead(cachedResponse.status, headers);
-          res.end(responseBody);
-
-          const urlPath = (req as Request).originalUrl || req.url || '/';
-          const [projectId] = urlPath.split('/').filter(Boolean);
-          const proxyEvent: ProxyEvent = {
-            id: Math.random().toString(36).substring(7),
-            projectId,
-            timestamp: Date.now(),
-            method: (req as Request).method || 'GET',
-            path: '/' + urlPath.split('/').slice(2).join('/'),
-            targetUrl: 'cache',
-            requestHeaders: req.headers as Record<string, string>,
-            requestBody: (req as any).body,
-            responseHeaders: cachedResponse.headers,
-            responseStatus: cachedResponse.status,
-            responseBody: cachedResponse.body,
-            duration: 0,
-            ...(req as any).foundRequest,
-          };
-          // increment hits
-          console.log('working with cached response', proxyEvent);
-          const request = await storage.findRequest(projectId, proxyEvent.path, proxyEvent.method);
-          console.log('request found?', request);
-          if (request) {
-            console.log('incrementing hits');
-            request.hits++;
-            await storage.updateRequest(projectId, request);
-          }
-
-          // Broadcast the cached response hit
-          wsManager.broadcast(proxyEvent);
-          return true;
+        
+        if (!cachedResponse) {
+          (req as any).startTime = Date.now();
+          return;
         }
 
-        (req as any).startTime = Date.now();
+        proxyReq.destroy();
+
+        const responseBody = typeof cachedResponse.body === 'string' ? cachedResponse.body : JSON.stringify(cachedResponse.body);
+        const headers = {...cachedResponse.headers};
+        // update content-length to match responseBody length
+        headers['content-length'] = Buffer.byteLength(responseBody).toString();
+        res.writeHead(cachedResponse.status, headers);
+        res.end(responseBody);
+
+        const urlPath = (req as Request).originalUrl || req.url || '/';
+        const [projectId] = urlPath.split('/').filter(Boolean);
+        const proxyEvent: ProxyEvent = {
+          id: Math.random().toString(36).substring(7),
+          projectId,
+          timestamp: Date.now(),
+          method: (req as Request).method || 'GET',
+          path: '/' + urlPath.split('/').slice(2).join('/'),
+          targetUrl: 'cache',
+          requestHeaders: req.headers as Record<string, string>,
+          requestBody: (req as any).body,
+          responseHeaders: cachedResponse.headers,
+          responseStatus: cachedResponse.status,
+          responseBody: cachedResponse.body,
+          duration: 0,
+          ...(req as any).foundRequest,
+        };
+        // increment hits
+        const request = await storage.findRequest(projectId, proxyEvent.path, proxyEvent.method);
+        if (request) {
+          request.hits++;
+          await storage.updateRequest(projectId, request);
+        }
+
+        // Broadcast the cached response hit
+        wsManager.broadcast(proxyEvent);
+        return true;
       },
 
       // Called when response is received from target
       // Lifecycle: After target responds, before sending back to client
-      proxyRes: (proxyRes, req: IncomingMessage) => {
+      proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage) => {
         const startTime = (req as any).startTime;
         const urlPath = (req as Request).originalUrl || req.url || '/';
         const [projectId, ...pathParts] = urlPath.split('/').filter(Boolean);

@@ -73,7 +73,7 @@ Next Steps:
 
 >  When using this prompt, replace the [your specific focus area] with whatever aspect you want to work on next, such as:
 >   - [x] Implementing the React frontend dashboard
->   - [x] Adding response locking functionality
+>   - [ ] Adding response locking functionality
 >   - [ ] Enhancing the storage system
 >   - [ ] Adding authentication
 >   - [ ] Implementing response modification features

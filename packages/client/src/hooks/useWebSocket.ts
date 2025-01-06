@@ -60,7 +60,10 @@ export const useWebSocket = (url: string) => {
 
         return () => {
             mountedRef.current = false;
-            wsRef.current?.close();
+            // Close socket only if it's open
+            if (wsRef.current?.readyState === WebSocket.OPEN) {
+                wsRef.current?.close();
+            }
         };
     }, [url]);
 

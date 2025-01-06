@@ -3,7 +3,7 @@ import { storage } from '../storage';
 
 const router = express.Router();
 
-router.get('/_history', async (req, res) => {
+router.get('/history', async (req, res) => {
   try {
     const history = await storage.getRoutes();
     res.json(history);

@@ -7,20 +7,24 @@ export const useProxyStore = create<ProxyState>()((set) => ({
   isConnected: false,
   addEvent: (event) => set((state) => {
     // Check if we already have an event with same project, path and method
-    const exists = state.events.some(e => 
+    const existingEvent = state.events.findIndex(e => 
       e.projectId === event.projectId && 
       e.path === event.path && 
       e.method === event.method
     );
     
-    if (!exists) {
+    if (existingEvent === -1) {
       return { events: [event, ...state.events].slice(0, 100) };
+    } else {
+      const events = [...state.events];
+      events[existingEvent].hits++;
+      return { events };
     }
-    return state;
   }),
   selectEvent: (id) => set({ selectedEventId: id }),
   // Indicate that the client is connected to the server
   setConnected: (connected) => set({ isConnected: connected }),
+  setEvents: (events) => set({ events }),
 }));
 
 export default useProxyStore;

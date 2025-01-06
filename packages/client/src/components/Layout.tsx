@@ -1,9 +1,23 @@
+import { useProxyStore } from "@/store/proxyStore";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { RequestList } from "./RequestList";
+import { useEffect } from "react";
 
 export const Layout = () => {
     const wsUrl = "ws://localhost:3000";
     const { isConnected } = useWebSocket(wsUrl);
+    const { events, setEvents } = useProxyStore();
+
+    useEffect(() => {
+        // Make an api call to get the initial events
+        const fetchEvents = async () => {
+            const response = await fetch(`http://localhost:3000/api/history`);
+            const data = await response.json();
+            setEvents(data);
+        };
+        fetchEvents();
+    }, []);
+
 
     return (
         <div className="flex flex-col h-screen bg-background">
@@ -14,7 +28,12 @@ export const Layout = () => {
                 </span>
             </div>
             <div className="flex-1">
-                <RequestList />
+                <RequestList
+                    events={events} 
+                    onLockEvent={() => { }} 
+                    onLockResponse={() => { }} 
+                    onEditResponse={() => { }} 
+                />
             </div>
         </div>
     );
