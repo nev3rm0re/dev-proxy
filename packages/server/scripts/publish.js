@@ -47,7 +47,7 @@ async function publish() {
 
     // Bump version
     console.log('📝 Bumping version...');
-    execSync(`yarn version ${response.bump} --no-git-tag-version`);
+    execSync(`yarn version --new-version ${response.bump}`);
 
     // Get new version
     const updatedPkg = JSON.parse(readFileSync('./package.json', 'utf8'));
