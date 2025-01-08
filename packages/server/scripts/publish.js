@@ -82,6 +82,7 @@ async function publish() {
     console.log(`✅ Successfully published v${newVersion}!`);
   } catch (error) {
     console.error('❌ Error during publishing:', error.message);
+    execSync('git reset --hard');
     process.exit(1);
   }
 }
