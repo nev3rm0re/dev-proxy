@@ -17,3 +17,10 @@ something more flexible - LowDB or MikroORM for now?
 
 Made a project README.md. Will resume working on frontend now. Should I install v0?
 
+## 2025-01-08
+
+Successfully published to NPM. Had to fix some issues with the build process: switched to 
+tsx from ts-node-dev. Now have to add ".js" when importing local modules. Will investigate
+further - this changes might solve my previous issues with the REQUIRE_ESM errors.
+Have so many feature ideas, will create a separate doc for them - 'FEATURE IDEAS.md'.
+
