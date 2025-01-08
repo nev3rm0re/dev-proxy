@@ -49,8 +49,7 @@ async function publish() {
     // Bump version
     console.log('📝 Bumping version...');
     if (response.bump === 'other') {
-      console.log('Enter the new version:');
-      execSync('yarn version');
+      execSync('yarn version', { stdio: 'inherit' });
     } else {
       execSync(`yarn version --new-version ${response.bump}`);
     }

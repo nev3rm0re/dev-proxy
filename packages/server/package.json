@@ -22,7 +22,7 @@
     "build": "yarn run build:server && yarn run copy-client",
     "build:server": "tsc",
     "copy-client": "mkdir -p public && cp -r ../client/dist/* public/",
-    "publish": "node scripts/publish.js",
+    "npm-publish": "node scripts/publish.js",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
     "setup": "ts-node src/test-setup.ts"
