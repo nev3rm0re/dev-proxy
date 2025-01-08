@@ -32,6 +32,7 @@ async function publish() {
         { title: 'Patch (bug fixes)', value: 'patch' },
         { title: 'Minor (new features)', value: 'minor' },
         { title: 'Major (breaking changes)', value: 'major' },
+        { title: 'Other (enter manually)', value: 'other' },
         { title: 'Cancel', value: 'cancel' }
       ]
     });
@@ -47,8 +48,11 @@ async function publish() {
 
     // Bump version
     console.log('📝 Bumping version...');
-    console.log(`... to ${response.bump}`);
-    execSync(`yarn version --new-version ${response.bump}`);
+    if (response.bump === 'other') {
+      execSync('yarn version');
+    } else {
+      execSync(`yarn version --new-version ${response.bump}`);
+    }
 
     // Get new version
     const updatedPkg = JSON.parse(readFileSync('./package.json', 'utf8'));
