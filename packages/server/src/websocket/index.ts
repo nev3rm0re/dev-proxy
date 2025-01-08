@@ -1,6 +1,6 @@
 // packages/server/src/websocket/index.ts
 import { WebSocket, WebSocketServer } from 'ws';
-import { ProxyEvent } from '../types';
+import { ProxyEvent } from '../types/index.js';
 
 export class WebSocketManager {
   private wss: WebSocketServer;

@@ -1,18 +1,27 @@
 {
   "name": "@4ev3rm0re/dev-proxy-server",
+  "type": "module",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "0.1.0",
-  "main": "dist/index.js",
+  "exports": "./dist/cli.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "public"
   ],
   "bin": {
     "dev-proxy": "./dist/cli.js"
   },
   "license": "MIT",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only src/cli.ts",
-    "build": "tsc",
+    "dev": "tsx watch src/cli.ts",
+    "build": "yarn run build:server && yarn run copy-client",
+    "build:server": "tsc",
+    "copy-client": "mkdir -p public && cp -r ../client/dist/* public/",
+    "publish": "node scripts/publish.js",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
     "setup": "ts-node src/test-setup.ts"
@@ -31,8 +40,9 @@
     "@types/express": "^5.0.0",
     "@types/node": "^20.10.0",
     "@types/ws": "^8.5.13",
+    "prompts": "^2.4.2",
     "ts-node": "^10.9.2",
-    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
 }

@@ -1,6 +1,7 @@
 {
   "name": "@4ev3rm0re/dev-proxy",
   "version": "0.2.0",
+  "type": "module",
   "private": true,
   "packageManager": "yarn@1.22.22",
   "publishConfig": {
@@ -14,7 +15,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build:client build:server",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",

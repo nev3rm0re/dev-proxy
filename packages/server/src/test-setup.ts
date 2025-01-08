@@ -1,5 +1,5 @@
 // packages/server/src/test-setup.ts
-import { storage } from './storage';
+import { storage } from './storage/index.js';
 
 async function setupTestProject() {
     await storage.createRoute({

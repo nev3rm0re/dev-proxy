@@ -1,0 +1,12 @@
+src/
+scripts/
+*.test.ts
+
+tsconfig.json
+.turbo
+
+node_modules/
+.DS_Store
+
+!dist/
+!public/

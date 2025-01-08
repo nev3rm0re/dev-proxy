@@ -2,9 +2,9 @@
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
-import { WebSocketManager } from './websocket';
-import { createProxyHandler } from './proxy';
-import apiRouter from './routes/api';
+import { WebSocketManager } from './websocket/index.js';
+import { createProxyHandler } from './proxy/index.js';
+import apiRouter from './routes/api.js';
 
 interface ServerOptions {
   port?: number;
@@ -52,6 +52,3 @@ export function startServer(options: ServerOptions = {}) {
 
   return server;
 }
-
-// Export for direct use if needed
-export { WebSocketManager } from './websocket';

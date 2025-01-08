@@ -1,7 +1,6 @@
 // packages/server/src/storage/index.ts
 import { JsonDB, Config } from 'node-json-db';
-import { ProjectConfig, ProxyEvent, Route, Response } from '../types';
-import { IncomingMessage, request } from 'http';
+import { ProjectConfig, ProxyEvent, Route, Response } from '../types/index.js';
 
 export class StorageManager {
   private db: JsonDB;

@@ -3,9 +3,9 @@ import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
 import { Request } from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
 import { Socket } from 'net';
-import { storage } from '../storage';
-import { WebSocketManager } from '../websocket';
-import { ProxyEvent } from '../types';
+import { storage } from '../storage/index.js';
+import { WebSocketManager } from '../websocket/index.js';
+import { ProxyEvent } from '../types/index.js';
 
 /**
  * IncomingMessage properties:
