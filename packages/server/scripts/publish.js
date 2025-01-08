@@ -71,7 +71,7 @@ async function publish() {
 
     // Publish
     console.log('📦 Publishing...');
-    execSync('yarn publish --access public', { stdio: 'inherit' });
+    execSync('npm publish --access public', { stdio: 'inherit' });
 
     // Create git commit and tag
     execSync(`git add package.json`);
