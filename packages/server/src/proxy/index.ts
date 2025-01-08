@@ -84,10 +84,10 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         const route = (req as any).route;
 
         const urlPath = (req as Request).originalUrl || req.url || '/';
-        const [projectId] = urlPath.split('/').filter(Boolean);
+        const [hostname] = urlPath.split('/').filter(Boolean);
         const proxyEvent: ProxyEvent = {
           id: Math.random().toString(36).substring(7),
-          projectId,
+          hostname,
           timestamp: Date.now(),
           method: (req as Request).method || 'GET',
           path: '/' + urlPath.split('/').slice(2).join('/'),

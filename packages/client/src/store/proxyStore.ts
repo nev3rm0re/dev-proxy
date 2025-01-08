@@ -10,7 +10,7 @@ export const useProxyStore = create<ProxyState>()((set, get) => ({
     setIncomingEventId(null);
     
     const existingEvent = state.events.findIndex(e => 
-      e.projectId === event.projectId && 
+      e.hostname === event.hostname && 
       e.path === event.path && 
       e.method === event.method
     );

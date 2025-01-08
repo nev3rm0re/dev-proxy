@@ -14,7 +14,7 @@ export interface ProxyResponse {
 
 export interface ProxyEvent {
     id: string;
-    projectId: string
+    hostname: string
     path: string;
     timestamp: number;
     method: string;

@@ -63,14 +63,6 @@ export class StorageManager {
     return await this.createRoute(route);
   }
 
-  async getProject(id: string): Promise<ProjectConfig | null> {
-    try {
-      return await this.db.getData(`/projects/${id}`);
-    } catch {
-      return null;
-    }
-  }
-
   async saveProject(config: ProjectConfig): Promise<void> {
     await this.db.push(`/projects/${config.id}`, config);
   }
@@ -153,20 +145,6 @@ export class StorageManager {
     const shortId = positiveHash.toString(36).padStart(6, '0').slice(-6);
     console.log('Generated shortId for', method, path, shortId);
     return shortId;
-  }
-
-  // Helper method to get route by short ID
-  async getRouteByShortId(projectId: string, shortId: string): Promise<Route | null> {
-    const project = await this.getProject(projectId);
-    if (!project) return null;
-
-    for (const route of project.routes) {
-      const routeShortId = this.shortId(route.method, route.path);
-      if (routeShortId === shortId) {
-        return route;
-      }
-    }
-    return null;
   }
 }
 
