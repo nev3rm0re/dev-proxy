@@ -47,6 +47,7 @@ async function publish() {
 
     // Bump version
     console.log('📝 Bumping version...');
+    console.log(`... to ${response.bump}`);
     execSync(`yarn version --new-version ${response.bump}`);
 
     // Get new version
