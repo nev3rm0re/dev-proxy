@@ -49,9 +49,9 @@ async function publish() {
     // Bump version
     console.log('📝 Bumping version...');
     if (response.bump === 'other') {
-      execSync('yarn version', { stdio: 'inherit' });
+      execSync('yarn version --no-git-tag-version', { stdio: 'inherit' });
     } else {
-      execSync(`yarn version --new-version ${response.bump}`);
+      execSync(`yarn version --no-git-tag-version --new-version ${response.bump}`);
     }
 
     // Get new version
