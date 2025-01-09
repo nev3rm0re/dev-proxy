@@ -2,6 +2,9 @@
 
 A development proxy server for API request monitoring and modification with a React-based UI.
 
+Github: https://github.com/nev3rm0re/dev-proxy
+NPM: https://www.npmjs.com/package/dev-proxy-server
+
 ## Features
 
 - Real-time API request monitoring and modification
