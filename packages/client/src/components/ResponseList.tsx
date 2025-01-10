@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Lock, LockOpen, Edit } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ProxyResponse } from '@/types/proxy';
+import { LockButton } from './ui/lock-button';
 
 interface ResponseListProps {
   responses: ProxyResponse[];
@@ -56,16 +57,13 @@ export const ResponseList: React.FC<ResponseListProps> = ({ responses, onLockRes
                 <span className="text-gray-400 text-sm">
                   {new Date(response.headers['date']).toLocaleString('en-GB', { timeZone: 'UTC', dateStyle: 'medium', timeStyle: 'short' })}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
+                <LockButton
+                  isLocked={response.isLocked ?? false}
                   onClick={(e) => {
                     e.stopPropagation();
                     onLockResponse(response.id);
                   }}
-                >
-                  {response.isLocked ? <LockOpen size={16} /> : <Lock size={16} />}
-                </Button>
+                />
               </div>
             </div>
           </CollapsibleTrigger>

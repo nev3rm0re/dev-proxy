@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Lock, LockOpen, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from "@/components/ui/button"
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ResponseList } from '@/components/ResponseList';
 import { ProxyEvent } from '@/types/proxy';
+import { LockButton } from '@/components/ui/lock-button';
 
 interface RequestListProps {
   events: ProxyEvent[];
@@ -66,20 +66,13 @@ export const RequestList: React.FC<RequestListProps> = ({
                 </div>
                 <div className="flex justify-between items-center gap-4">
                   <span className="text-gray-400 text-sm">{event.hits}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:bg-gray-700"
+                  <LockButton
+                    isLocked={event.isLocked}
                     onClick={(e) => {
                       e.stopPropagation();
                       onLockEvent(event.path);
                     }}
-                  >
-                    {event.isLocked ? 
-                      <Lock size={16} className="text-gray-300 hover:text-white" /> : 
-                      <LockOpen size={16} className="text-gray-300 hover:text-white" />
-                    }
-                  </Button>
+                  />
                 </div>
               </div>
             </CollapsibleTrigger>

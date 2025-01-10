@@ -1,7 +1,7 @@
 ## Feature Ideas
 
-- [ ] Edit locked route's response body
 - [ ] Allow to select response to send back
+- [ ] Edit locked route's response body
 - [ ] Add "Server settings"
     - [ ] Allow to work on `/` path - Set default "project"
     - [ ] Preserve log should be optional
