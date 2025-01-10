@@ -72,6 +72,19 @@ export class StorageManager {
     return routes.find(r => r.method === method && r.path === path) || null;
   }
 
+  async lockResponse(requestId: string, responseId: string): Promise<void> {
+    const route = await this.getRoute(requestId);
+    if (!route) {
+      throw new Error(`Route ${requestId} not found`);
+    }
+    const response = route.responses.find(r => r.id === responseId);
+    if (!response) {
+      throw new Error(`Response ${responseId} not found`);
+    }
+    response.isLocked = true;
+    await this.saveRoute(route);
+  }
+
   async updateRequest(projectId: string, request: Route): Promise<void> {
     const routes = await this.getRoutes();
     const route = routes.find(r => r.method === request.method && r.path === request.path);
@@ -89,6 +102,17 @@ export class StorageManager {
   async findRandomResponse(path: string, method: string): Promise<Response | null> {
     const route = await this.getRouteByUrlMethod(path, method);
     return route?.responses[Math.floor(Math.random() * route.responses.length)] || null;
+  }
+
+  async findLockedResponse(path: string, method: string): Promise<Response | null> {
+    const route = await this.getRouteByUrlMethod(path, method);
+    const lockedResponse = route?.responses.find(r => r.isLocked) || null;
+
+    if (lockedResponse) {
+      return lockedResponse;
+    }
+
+    return this.findRandomResponse(path, method);
   }
 
   async getRoutes(): Promise<Route[]> {

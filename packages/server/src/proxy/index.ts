@@ -39,7 +39,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       console.log('Found route', route);
       
       if (route?.isLocked) {
-        const lastResponse = await storage.findRandomResponse(urlPath, method);
+        const lastResponse = await storage.findLockedResponse(urlPath, method);
         
         if (lastResponse) {
           // Attach the cached response to the request for later use

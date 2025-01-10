@@ -21,4 +21,18 @@ router.post('/events/:requestId', async (req, res) => {
   }
 });
 
+router.put('/events/:requestId/:responseId', async (req, res) => {
+  try {
+    const { response } = req.body;
+    if (!response) {
+      return res.status(400).json({ error: 'Response data is required' });
+    }
+    await storage.lockResponse(req.params.requestId, req.params.responseId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to set locked response' });
+  }
+});
+
+
 export default router;

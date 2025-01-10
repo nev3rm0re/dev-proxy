@@ -1,9 +1,11 @@
 // packages/server/src/types/index.ts
 export interface Response {
+  responseId: string;
   body: any;
   status: number | undefined;
   headers?: Record<string, string>;
   count: number;
+  isLocked: boolean;
 }
 
 export interface Route {
