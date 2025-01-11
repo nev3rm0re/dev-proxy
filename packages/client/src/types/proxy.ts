@@ -1,6 +1,6 @@
 // src/types/proxy.ts
 export interface ProxyResponse {
-  id: string;
+  responseId: string;
   status: number;
   headers: {
     'content-type': string;
@@ -8,6 +8,7 @@ export interface ProxyResponse {
     date: string;
   }
   body: string;
+  lockedBody?: string | null;
   timestamp: number;
   isLocked?: boolean;
 }
@@ -37,4 +38,6 @@ export interface ProxyEvent {
     addEvent: (event: ProxyEvent) => void;
     setIncomingEventId: (id: string | null) => void;
     setConnected: (connected: boolean) => void;
+    updateEvent: (event: ProxyEvent) => void;
+    getEvent: (id: string) => ProxyEvent | undefined;
   }

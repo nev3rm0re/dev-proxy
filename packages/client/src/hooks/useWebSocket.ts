@@ -29,6 +29,7 @@ export const useWebSocket = (url: string) => {
             ws.onmessage = (event) => {
                 try {
                     const proxyEvent: ProxyEvent = JSON.parse(event.data);
+                    console.log('Received event:', proxyEvent);
                     addEvent(proxyEvent);
                 } catch (error) {
                     console.error("Error parsing WebSocket message:", error);
@@ -41,7 +42,7 @@ export const useWebSocket = (url: string) => {
                     setConnected(false);
                 }
                 if (mountedRef.current) {
-                    //   setTimeout(connect, 2000);
+                    setTimeout(connect, 2000);
                 }
             };
 

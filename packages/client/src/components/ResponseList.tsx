@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Edit } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ProxyResponse } from '@/types/proxy';
+import { ProxyEvent, ProxyResponse } from '@/types/proxy';
 import { LockButton } from './ui/lock-button';
 
 interface ResponseListProps {
+  route: ProxyEvent;
   responses: ProxyResponse[];
-  onLockResponse: (responseId: string) => void;
+  onLockResponse: ( responseId: string) => void;
   onEditResponse: (responseId: string, newBody: string) => void;
 }
 
@@ -35,10 +36,10 @@ export const ResponseList: React.FC<ResponseListProps> = ({ responses, onLockRes
           <CollapsibleTrigger asChild>
             <div 
               className="flex items-center justify-between p-2 bg-gray-800 rounded cursor-pointer hover:bg-gray-700"
-              onClick={() => handleToggleExpand(response.id)}
+              onClick={() => handleToggleExpand(response.responseId)}
             >
               <div className="flex items-center space-x-2">
-                {expandedResponseId === response.id ? 
+                {expandedResponseId === response.responseId ? 
                   <ChevronDown size={16} className="text-gray-300 hover:text-white transition-colors" /> : 
                   <ChevronRight size={16} className="text-gray-300 hover:text-white transition-colors" />
                 }
@@ -61,9 +62,9 @@ export const ResponseList: React.FC<ResponseListProps> = ({ responses, onLockRes
                   isLocked={response.isLocked ?? false}
                   onClick={(e) => {
                     e.stopPropagation();
-                    onLockResponse(response.id);
+                    onLockResponse(response.responseId);
                   }}
-                />
+                /> 
               </div>
             </div>
           </CollapsibleTrigger>
@@ -71,14 +72,14 @@ export const ResponseList: React.FC<ResponseListProps> = ({ responses, onLockRes
             <div className="p-2 bg-gray-900 rounded mt-1">
               {response.isLocked ? (
                 <>
-                  {editingResponseId === response.id ? (
+                  {editingResponseId === response.responseId ? (
                     <div>
                       <textarea
                         className="w-full h-40 p-2 bg-gray-800 text-gray-300 rounded"
-                        defaultValue={response.body}
+                        defaultValue={JSON.stringify(response.lockedBody ?? response.body, null, 2)}
                       />
                       <Button 
-                        onClick={() => handleSaveEdit(response.id, (document.querySelector('textarea') as HTMLTextAreaElement).value)}
+                        onClick={() => handleSaveEdit(response.responseId, (document.querySelector('textarea') as HTMLTextAreaElement).value)}
                         className="mt-2"
                       >
                         Save
@@ -86,9 +87,9 @@ export const ResponseList: React.FC<ResponseListProps> = ({ responses, onLockRes
                     </div>
                   ) : (
                     <div>
-                      <pre className="text-gray-300 whitespace-pre-wrap">{response.body}</pre>
+                      <pre className="text-gray-300 whitespace-pre-wrap">{JSON.stringify(response.lockedBody ?? response.body, null, 2)}</pre>
                       <Button 
-                        onClick={() => handleEditResponse(response.id)}
+                        onClick={() => handleEditResponse(response.responseId)}
                         className="mt-2"
                       >
                         <Edit size={16} className="mr-2" />

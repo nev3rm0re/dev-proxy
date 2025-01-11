@@ -78,6 +78,7 @@ export const RequestList: React.FC<RequestListProps> = ({
             </CollapsibleTrigger>
             <CollapsibleContent>
               <ResponseList
+                route={event}
                 responses={event.responses}
                 onLockResponse={(responseId) => onLockResponse(event.id, responseId)}
                 onEditResponse={(responseId, newBody) => onEditResponse(event.id, responseId, newBody)}

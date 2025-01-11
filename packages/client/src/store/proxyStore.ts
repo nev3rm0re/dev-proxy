@@ -1,10 +1,18 @@
 import { create } from "zustand";
-import { ProxyState } from "../types/proxy";
+import { ProxyEvent, ProxyState } from "../types/proxy";
 
 export const useProxyStore = create<ProxyState>()((set, get) => ({
   events: [],
   incomingEventId: null,
   isConnected: false,
+  getEvent: (id: string) => get().events.find(event => event.id === id),
+  updateEvent: (event: ProxyEvent) => set((state) => {
+    const existingEvent = state.events.findIndex(e => e.id === event.id);
+    if (existingEvent !== -1) {
+      state.events[existingEvent] = event;
+    }
+    return { events: state.events };
+  }),
   addEvent: (event) => set((state) => {
     const { setIncomingEventId } = get();
     setIncomingEventId(null);
