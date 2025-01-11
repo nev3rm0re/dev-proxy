@@ -33,7 +33,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -61,7 +63,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -89,7 +93,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -117,7 +123,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -145,7 +153,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -173,7 +183,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -201,7 +213,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -229,7 +243,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             },
             {
                 "headers": {
@@ -257,7 +273,9 @@ async function setupTestProject() {
                     }
                 ],
                 "status": 200,
-                "count": 1
+                "count": 1,
+                responseId: '',
+                isLocked: false
             }
         ],
         "isLocked": true,
