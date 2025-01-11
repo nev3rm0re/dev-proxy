@@ -21,18 +21,38 @@ router.post('/events/:requestId', async (req, res) => {
   }
 });
 
-router.put('/events/:requestId/:responseId', async (req, res) => {
+router.post<{ requestId: string; responseId: string }>('/events/:requestId/:responseId', async (req, res) => {
   try {
-    const { response } = req.body;
-    if (!response) {
-      return res.status(400).json({ error: 'Response data is required' });
-    }
-    await storage.lockResponse(req.params.requestId, req.params.responseId);
-    res.json({ success: true });
+    const response = await storage.toggleResponseLock(req.params.requestId, req.params.responseId);
+    res.json({
+      data: response,
+      success: true,
+      message: `Response ${req.params.responseId} locked for request ${req.params.requestId}`
+    });
+    return;
   } catch (err) {
     res.status(500).json({ error: 'Failed to set locked response' });
+    return;
   }
 });
 
+router.post('/events/:requestId/:responseId/body', async (req, res) => {
+  try {
+    const route = await storage.getRoute(req.params.requestId);
+    if (!route) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+    const response = route.responses.find(r => r.responseId === req.params.responseId);
+    if (!response) {
+      res.status(404).json({ error: 'Response not found' });
+      return;
+    }
+    response.lockedBody = req.body;
+    res.json({ success: true, data: response });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save response' });
+  }
+});
 
 export default router;

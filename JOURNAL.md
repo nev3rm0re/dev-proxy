@@ -24,3 +24,9 @@ tsx from ts-node-dev. Now have to add ".js" when importing local modules. Will i
 further - this changes might solve my previous issues with the REQUIRE_ESM errors.
 Have so many feature ideas, will create a separate doc for them - 'FEATURE IDEAS.md'.
 
+## 2025-01-10
+
+Resumed working on the "Lock response" functionality. Thinking about more robust storage solution.
+I think I would benefit from keeping entities separate - routes, responses, future settings. 
+Now I can lock and edit response text. On unlock it resets to the original.
+

@@ -1,11 +1,12 @@
 ## Feature Ideas
 
-- [ ] Allow to select response to send back
-- [ ] Edit locked route's response body
+- [x] Allow to select response to send back
+- [x] Edit locked route's response body
+- [ ] Add responses manually with differentiation between manually created and proxied
+- [ ] Allow adding/copying responses
 - [ ] Add "Server settings"
     - [ ] Allow to work on `/` path - Set default "project"
     - [ ] Preserve log should be optional
-- [ ] Allow adding/copying responses
 - [ ] Add routes manually
     - [ ] Add "wildcard" routes
 - [ ] Import routes from Swagger

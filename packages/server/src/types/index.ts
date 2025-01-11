@@ -6,6 +6,7 @@ export interface Response {
   headers?: Record<string, string>;
   count: number;
   isLocked: boolean;
+  lockedBody?: string | null;
 }
 
 export interface Route {

@@ -74,12 +74,15 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
 
         proxyReq.destroy();
 
-        const responseBody = typeof cachedResponse.body === 'string' ? cachedResponse.body : JSON.stringify(cachedResponse.body);
+        const body = cachedResponse.lockedBody || cachedResponse.body;
+        console.log('Picked response', cachedResponse.lockedBody, cachedResponse.body);
+
+        const response = typeof body === 'string' ? body : JSON.stringify(body);
         const headers = {...cachedResponse.headers};
         // update content-length to match responseBody length
-        headers['content-length'] = Buffer.byteLength(responseBody).toString();
+        headers['content-length'] = Buffer.byteLength(response).toString();
         res.writeHead(cachedResponse.status, headers);
-        res.end(responseBody);
+        res.end(response);
 
         const route = (req as any).route;
 

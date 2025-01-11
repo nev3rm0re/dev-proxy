@@ -1,5 +1,6 @@
 // packages/server/src/storage/index.ts
 import { JsonDB, Config } from 'node-json-db';
+import { shortId } from '../utils/hash.js';
 import { ProjectConfig, ProxyEvent, Route, Response } from '../types/index.js';
 
 export class StorageManager {
@@ -23,8 +24,8 @@ export class StorageManager {
   }
 
   async createRoute(data: Omit<Route, 'id'>): Promise<Route | null> {
-    const shortId = this.shortId(data.method, data.path);
-    return await this.saveRoute({ id: shortId, ...data });
+    const routeId = shortId(data.method, data.path);
+    return await this.saveRoute({ id: routeId, ...data });
   }
 
   async saveRoute(data: Route): Promise<Route | null> {
@@ -42,11 +43,11 @@ export class StorageManager {
   }
 
   async getRouteByUrlMethod(urlPath: string, method: string): Promise<Route | null> {
-    const shortId = this.shortId(method, urlPath);
+    const routeId = shortId(method, urlPath);
     try {
-      return await this.getRoute(`${shortId}`);
+      return await this.getRoute(`${routeId}`);
     } catch (error) {
-      console.log('Route not found', shortId, error);
+      console.log('Route not found', routeId, error);
       return null;
     }
   }
@@ -72,17 +73,21 @@ export class StorageManager {
     return routes.find(r => r.method === method && r.path === path) || null;
   }
 
-  async lockResponse(requestId: string, responseId: string): Promise<void> {
+  async toggleResponseLock(requestId: string, responseId: string): Promise<Response | null> {
     const route = await this.getRoute(requestId);
     if (!route) {
       throw new Error(`Route ${requestId} not found`);
     }
-    const response = route.responses.find(r => r.id === responseId);
+    const response = route.responses.find(r => r.responseId === responseId);
     if (!response) {
       throw new Error(`Response ${responseId} not found`);
     }
-    response.isLocked = true;
+    response.isLocked = !response.isLocked;
+    if (response.isLocked) {
+      response.lockedBody = null;
+    }
     await this.saveRoute(route);
+    return response;
   }
 
   async updateRequest(projectId: string, request: Route): Promise<void> {
@@ -131,10 +136,12 @@ export class StorageManager {
   ): Promise<void> {
 
     const normalizedResponse = {
+      responseId: '',
       headers: proxyEvent.responseHeaders,
       body: proxyEvent.responseBody,
       status: proxyEvent.responseStatus,
-      count: 1
+      count: 1,
+      isLocked: false
     };
 
     route.hits++;
