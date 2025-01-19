@@ -1,12 +1,18 @@
 import express from 'express';
 import { storage } from '../storage/index.js';
 import { v4 as uuidv4 } from 'uuid';
+import { Request, Response, RequestHandler } from 'express';
 
 interface Server {
     id: string;
     name: string;
     url: string;
     isDefault: boolean;
+}
+
+interface ServerRequestBody {
+    name: string;
+    url: string;
 }
 
 const router = express.Router();
@@ -87,7 +93,7 @@ router.get('/settings/servers', async (req, res) => {
     }
 });
 
-router.post('/settings/servers', async (req, res) => {
+router.post<{}, {}, ServerRequestBody>('/settings/servers', (async (req, res) => {
     try {
         const { name, url } = req.body;
         
@@ -110,7 +116,7 @@ router.post('/settings/servers', async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to add server' });
     }
-});
+}) as RequestHandler);
 
 router.post('/settings/servers/:id/default', async (req, res) => {
     try {
@@ -132,7 +138,7 @@ router.delete('/settings/servers/:id', async (req, res) => {
     }
 });
 
-router.put('/settings/servers/:id', async (req, res) => {
+router.put('/settings/servers/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name, url } = req.body;
