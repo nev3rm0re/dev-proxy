@@ -4,6 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ResponseList } from '@/components/ResponseList';
 import { ProxyEvent } from '@/types/proxy';
 import { LockButton } from '@/components/ui/lock-button';
+import { cn } from "@/lib/utils";
 
 interface RequestListProps {
   events: ProxyEvent[];
@@ -47,12 +48,14 @@ export const RequestList: React.FC<RequestListProps> = ({
 
       <div className="flex-1 overflow-auto">
         {events.map((event) => (
-          <Collapsible key={event.path} open={expandedPath === event.path}>
+          <Collapsible key={event.path} open={expandedPath === event.path} className="relative">
             <CollapsibleTrigger asChild>
               <div
                 onClick={() => handleToggleExpand(event.path)}
-                className={`grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800
-                ${event.path === incomingEventId ? 'animate-pulse-gradient' : ''}`}
+                className={cn(
+                  "sticky top-0 z-10 self-start grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800 bg-gray-900",
+                  event.path === incomingEventId && 'animate-pulse-gradient'
+                )}
               >
                 <div className="text-gray-300 flex items-baseline w-6 mt-1">
                   {expandedPath === event.path ? 
@@ -70,7 +73,7 @@ export const RequestList: React.FC<RequestListProps> = ({
                     isLocked={event.isLocked}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onLockEvent(event.path);
+                      onLockEvent(event.id);
                     }}
                   />
                 </div>

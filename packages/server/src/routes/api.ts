@@ -1,5 +1,13 @@
 import express from 'express';
 import { storage } from '../storage/index.js';
+import { v4 as uuidv4 } from 'uuid';
+
+interface Server {
+    id: string;
+    name: string;
+    url: string;
+    isDefault: boolean;
+}
 
 const router = express.Router();
 
@@ -14,9 +22,23 @@ router.get('/history', async (req, res) => {
 
 router.post('/events/:requestId', async (req, res) => {
   try {
-    await storage.lockRoute(req.params.requestId);
+    await storage.toggleRouteLock(req.params.requestId);
     res.json({ success: true });
   } catch (err) {
+    res.status(500).json({ error: 'Failed to lock request' });
+  }
+});
+
+router.post('/events/:requestId/lock', async (req, res) => {
+  try {
+    const route = await storage.toggleRouteLock(req.params.requestId);
+    res.json({ 
+      data: route,
+      success: true,
+      message: `Request ${req.params.requestId} ${route.isLocked ? 'locked' : 'unlocked'}`
+    });
+  } catch (err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to lock request' });
   }
 });
@@ -31,6 +53,7 @@ router.post<{ requestId: string; responseId: string }>('/events/:requestId/:resp
     });
     return;
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: 'Failed to set locked response' });
     return;
   }
@@ -53,6 +76,81 @@ router.post('/events/:requestId/:responseId/body', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to save response' });
   }
+});
+
+router.get('/settings/servers', async (req, res) => {
+    try {
+        const servers = await storage.getServers() || [];
+        res.json(servers);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch servers' });
+    }
+});
+
+router.post('/settings/servers', async (req, res) => {
+    try {
+        const { name, url } = req.body;
+        
+        if (!name || !url) {
+            return res.status(400).json({ error: 'Name and URL are required' });
+        }
+
+        const servers = await storage.getServers() || [];
+        const isDefault = servers.length === 0;
+
+        const newServer: Server = {
+            id: uuidv4(),
+            name,
+            url,
+            isDefault
+        };
+
+        await storage.addServer(newServer);
+        res.json(newServer);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to add server' });
+    }
+});
+
+router.post('/settings/servers/:id/default', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await storage.setDefaultServer(id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to set default server' });
+    }
+});
+
+router.delete('/settings/servers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await storage.deleteServer(id);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to delete server' });
+    }
+});
+
+router.put('/settings/servers/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, url } = req.body;
+        
+        if (!name || !url) {
+            return res.status(400).json({ error: 'Name and URL are required' });
+        }
+
+        await storage.updateServer(id, { name, url });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to update server' });
+    }
+});
+
+router.delete('/history', async (req, res) => {
+    await storage.clearEvents();
+    res.json({ success: true });
 });
 
 export default router;

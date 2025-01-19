@@ -30,3 +30,6 @@ Resumed working on the "Lock response" functionality. Thinking about more robust
 I think I would benefit from keeping entities separate - routes, responses, future settings. 
 Now I can lock and edit response text. On unlock it resets to the original.
 
+## 2025-01-19
+
+Added "Server settings" - allows to work on `/` path for default project, set up "server name" instead of "domain" for proxying.

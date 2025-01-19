@@ -22,21 +22,75 @@ import { ProxyEvent } from '../types/index.js';
  * - complete: Whether message is complete
  * - aborted: Whether request was aborted by client
  */
+
+const isDomainLike = (str: string): boolean => {
+  // Simple check for domain-like strings (contains at least one dot)
+  return /^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z0-9-_.]+$/.test(str);
+};
+
+const getHostnameFromRequest = (req: IncomingMessage): string => {
+  const urlPath = (req as Request).originalUrl || req.url || '/';
+  const [firstPart] = urlPath.split('/').filter(Boolean);
+  
+  if ((req as any).isServerName || !isDomainLike(firstPart)) {
+    // For server name paths or default server case, use hostname from target URL
+    return new URL((req as any).target).hostname;
+  }
+  // For domain-like paths, use the first part directly
+  return firstPart;
+};
+
 export function createProxyHandler(wsManager: WebSocketManager): RequestHandler {
   return createProxyMiddleware({
     // Determines target URL for each request
     // Lifecycle: Called first when request is received
     router: async (req: IncomingMessage) => {
       const urlPath = (req as Request).originalUrl || req.url || '/';
-      const [hostname] = urlPath.split('/').filter(Boolean);
-      
-      // Check for previous matching request
-      const path = '/' + urlPath.split('/').slice(2).join('/');
+      const [firstPart, ...restParts] = urlPath.split('/').filter(Boolean);
+      const path = '/' + restParts.join('/');
       const method = (req as Request).method || 'GET';
-      console.log('Getting route for', hostname, path, method);
-      const route = await storage.getRouteByUrlMethod(urlPath, method) || await storage.createRouteFromRequest({ hostname, path: urlPath, method });
+
+      let targetUrl: string;
+      let hostname: string = firstPart;
+      let isServerName = false;
+
+      if (isDomainLike(firstPart)) {
+        // Case 1: Domain-like path (/api.example.com/...)
+        targetUrl = `https://${firstPart}`;
+      } else {
+        // Get all servers to check for server name or default
+        const servers = await storage.getServers();
+        
+        if (servers.length === 0) {
+          throw new Error('No servers configured. Please add at least one server in settings.');
+        }
+
+        const serverByName = servers.find(s => s.name === firstPart);
+        
+        if (serverByName) {
+          // Case 2: Server name match (/myserver/...)
+          targetUrl = serverByName.url;
+          hostname = new URL(serverByName.url).hostname;
+          isServerName = true;
+        } else {
+          // Case 3: Default server fallback (/api/...)
+          const defaultServer = servers.find(s => s.isDefault);
+          if (!defaultServer) {
+            throw new Error('No default server configured. Please set a default server in settings.');
+          }
+          targetUrl = defaultServer.url;
+          hostname = new URL(defaultServer.url).hostname;
+        }
+      }
+
+      // Store information for pathRewrite
+      (req as any).isServerName = isServerName;
+      
+      // Get or create route for tracking
+      const route = await storage.getRouteByUrlMethod(urlPath, method) || 
+                   await storage.createRouteFromRequest({ hostname, path: urlPath, method });
       (req as any).route = route;
-      console.log('Found route', route);
+      console.log('Found route', route, route?.isLocked);
       
       if (route?.isLocked) {
         const lastResponse = await storage.findLockedResponse(urlPath, method);
@@ -47,15 +101,29 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
           (req as any).foundRequest = route;
         }
       }
-      
-      return `https://${hostname}`;
+
+      // Store the target URL for later use
+      (req as any).target = targetUrl;
+      return targetUrl;
     },
 
     // Rewrites the path by removing the project ID prefix
     // Lifecycle: Called after router, before request is proxied
-    pathRewrite: (path) => {
+    pathRewrite: (path, req) => {
       const parts = path.split('/').filter(Boolean);
-      return '/' + parts.slice(1).join('/');
+      
+      // If this was a server name path, remove the server name
+      if ((req as any).isServerName) {
+        return '/' + parts.slice(1).join('/');
+      }
+      
+      // For domain-like paths, remove the domain
+      if (isDomainLike(parts[0])) {
+        return '/' + parts.slice(1).join('/');
+      }
+      
+      // For default server, keep the full path
+      return path;
     },
 
     // Changes the origin of the host header to the target URL
@@ -75,7 +143,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         proxyReq.destroy();
 
         const body = cachedResponse.lockedBody || cachedResponse.body;
-        console.log('Picked response', cachedResponse.lockedBody, cachedResponse.body);
+        console.log('Picked response', cachedResponse.body);
 
         const response = typeof body === 'string' ? body : JSON.stringify(body);
         const headers = {...cachedResponse.headers};
@@ -85,9 +153,9 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         res.end(response);
 
         const route = (req as any).route;
-
         const urlPath = (req as Request).originalUrl || req.url || '/';
-        const [hostname] = urlPath.split('/').filter(Boolean);
+        const hostname = getHostnameFromRequest(req);
+
         const proxyEvent: ProxyEvent = {
           id: Math.random().toString(36).substring(7),
           hostname,
@@ -118,21 +186,28 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage) => {
         const startTime = (req as any).startTime;
         const urlPath = (req as Request).originalUrl || req.url || '/';
-        const [_, ...pathParts] = urlPath.split('/').filter(Boolean);
+        const hostname = getHostnameFromRequest(req);
+
+        // Get the path without the first part (domain or server name)
+        const path = (req as any).isServerName || isDomainLike(urlPath.split('/')[1])
+          ? '/' + urlPath.split('/').slice(2).join('/')
+          : urlPath;
 
         const route = (req as any).route;
 
         const proxyEvent: ProxyEvent = {
           id: Math.random().toString(36).substring(7),
+          hostname,
           timestamp: startTime,
           method: (req as Request).method || 'GET',
-          path: '/' + pathParts.join('/'),
+          path,
           targetUrl: (req as any).target,
           requestHeaders: req.headers as Record<string, string>,
           requestBody: (req as any).body,
           responseHeaders: proxyRes.headers as Record<string, string>,
           responseStatus: proxyRes.statusCode,
           responseBody: '',
+          ...route,
         };
 
         let body = '';
@@ -144,7 +219,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
           } catch {
             proxyEvent.responseBody = body;
           }
-          storage.addRouteResponse(route, proxyEvent, true);
+          storage.addRouteResponse(route, proxyEvent);
           wsManager.broadcast(proxyEvent);
         });
       },

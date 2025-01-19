@@ -18,20 +18,15 @@ export function startServer(options: ServerOptions = {}) {
 
   app.use(cors());
   app.use(express.json());
-  // API Routes - would not be caught by proxy middleware
-  app.use('/api', apiRouter);
-
-  // Error handling middleware
-  app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
-  });
 
   // Serve static files for dashboard (we'll add this later)
   app.use(express.static('public'));
 
   // Setup proxy middleware with error handling
   app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      return next();
+    }
     createProxyHandler(wsManager)(req, res, (err) => {
       if (err?.message?.includes('No target URL found for project')) {
         res.status(404).json({ error: 'Not Found', message: err.message });
@@ -40,6 +35,16 @@ export function startServer(options: ServerOptions = {}) {
       }
     });
   });
+
+  // API Routes
+  app.use('/api', apiRouter);
+
+  // Error handling middleware
+  app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error(err.stack);
+    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+  });
+
 
   const PORT = options.port || process.env.PORT || 3000;
   server.listen(PORT, () => {

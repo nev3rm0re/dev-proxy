@@ -29,7 +29,11 @@ export const useProxyStore = create<ProxyState>()((set, get) => ({
     } else {
       setIncomingEventId(state.events[existingEvent].path);
       const events = [...state.events];
-      events[existingEvent].hits++;
+      events[existingEvent] = {
+        ...events[existingEvent],
+        hits: events[existingEvent].hits + 1,
+        responses: event.responses
+      };
       return { events };
     }
   }),
