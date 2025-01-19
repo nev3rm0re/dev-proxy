@@ -138,11 +138,10 @@ router.delete('/settings/servers/:id', async (req, res) => {
     }
 });
 
-router.put('/settings/servers/:id', async (req: Request, res: Response) => {
+router.put<{id: string}, {}, ServerRequestBody>('/settings/servers/:id', (async (req, res) => {
     try {
         const { id } = req.params;
         const { name, url } = req.body;
-        
         if (!name || !url) {
             return res.status(400).json({ error: 'Name and URL are required' });
         }
@@ -152,7 +151,7 @@ router.put('/settings/servers/:id', async (req: Request, res: Response) => {
     } catch (error) {
         res.status(500).json({ error: 'Failed to update server' });
     }
-});
+}) as RequestHandler);
 
 router.delete('/history', async (req, res) => {
     await storage.clearEvents();
