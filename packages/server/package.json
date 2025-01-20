@@ -24,14 +24,17 @@
     "copy-client": "mkdir -p public && cp -r ../client/dist/* public/",
     "npm-publish": "node scripts/publish.js",
     "clean": "rm -rf dist",
-    "start": "node dist/index.js",
-    "setup": "ts-node src/test-setup.ts"
+    "start": "node dist/cli.js",
+    "setup": "ts-node src/test-setup.ts",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "commander": "^12.1.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "http-proxy-middleware": "^3.0.3",
+    "jest": "^29.7.0",
     "node-json-db": "^2.3.0",
     "path-to-regexp": "^8.2.0",
     "uuid": "^11.0.5",
@@ -40,12 +43,20 @@
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.10.0",
+    "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.13",
+    "jest": "^29.7.0",
     "prompts": "^2.4.2",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "strip-ansi": "6.0.1",
+    "string-width": "4.2.3",
+    "chalk": "4.1.2"
   }
 }
