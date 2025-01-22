@@ -25,7 +25,7 @@ import { ProxyEvent } from '../types/index.js';
 
 const isDomainLike = (str: string): boolean => {
   // Simple check for domain-like strings (contains at least one dot)
-  return /^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z0-9-_.]+$/.test(str);
+  return /^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+$/.test(str);
 };
 
 const getHostnameFromRequest = (req: IncomingMessage): string => {

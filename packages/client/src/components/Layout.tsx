@@ -7,7 +7,7 @@ import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Settings } from "./Settings";
 
 export const Layout = () => {
-    const wsUrl = "ws://localhost:3000";
+    const wsUrl = `/ws`;
     const { isConnected } = useWebSocket(wsUrl);
     const { events, setEvents, incomingEventId, updateEvent, getEvent } = useProxyStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -15,7 +15,7 @@ export const Layout = () => {
     useEffect(() => {
         // Make an api call to get the initial events
         const fetchEvents = async () => {
-            const response = await fetch(`http://localhost:3000/api/history`);
+            const response = await fetch(`/api/history`);
             const data = await response.json();
             setEvents(data);
         };
@@ -24,7 +24,7 @@ export const Layout = () => {
 
     const handleLockEvent = async (eventId: string) => {
         try {
-            const response = await fetch(`http://localhost:3000/api/events/${eventId}/lock`, {
+            const response = await fetch(`/api/events/${eventId}/lock`, {
                 method: 'POST',
             });
 
@@ -49,7 +49,7 @@ export const Layout = () => {
 
     const handleLockResponse = async (routeId: string, responseId: string) => {
         try {
-            const updatedResponse = await fetch(`http://localhost:3000/api/events/${routeId}/${responseId}`, {
+            const updatedResponse = await fetch(`/api/events/${routeId}/${responseId}`, {
                 method: 'POST',
             });
             const data = await updatedResponse.json();
@@ -61,7 +61,7 @@ export const Layout = () => {
 
     const handleEditResponse = async (routeId: string, responseId: string, newBody: string) => {
         try {
-            const response = await fetch(`http://localhost:3000/api/events/${routeId}/${responseId}/body`, {
+            const response = await fetch(`/api/events/${routeId}/${responseId}/body`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -78,7 +78,7 @@ export const Layout = () => {
     const handleClearEvents = async () => {
         if (window.confirm('Are you sure you want to clear all events? This cannot be undone.')) {
             try {
-                await fetch('http://localhost:3000/api/history', {
+                await fetch('/api/history', {
                     method: 'DELETE',
                 });
                 setEvents([]);

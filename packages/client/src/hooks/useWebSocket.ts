@@ -18,7 +18,7 @@ export const useWebSocket = (url: string) => {
                 wsRef.current = null;
             }
 
-            console.log("Connecting to WebSocket...");
+            console.log(`Connecting to WebSocket at ${url}`);
             const ws = new WebSocket(url);
 
             ws.onopen = () => {

@@ -33,3 +33,8 @@ Now I can lock and edit response text. On unlock it resets to the original.
 ## 2025-01-19
 
 Added "Server settings" - allows to work on `/` path for default project, set up "server name" instead of "domain" for proxying.
+
+## 2025-01-22
+
+Keep messing up serving frontend, need to come up with a better solution.
+Decided to serve it under a different port.

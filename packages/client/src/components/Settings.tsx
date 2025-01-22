@@ -29,7 +29,7 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
 
     const fetchServers = async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/settings/servers');
+            const response = await fetch('/api/settings/servers');
             const data = await response.json();
             setServers(data);
         } catch (error) {
@@ -39,7 +39,7 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
 
     const handleAddServer = async () => {
         try {
-            const response = await fetch('http://localhost:3000/api/settings/servers', {
+            const response = await fetch('/api/settings/servers', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -58,7 +58,7 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
         if (!editingServer) return;
 
         try {
-            const response = await fetch(`http://localhost:3000/api/settings/servers/${editingServer.id}`, {
+            const response = await fetch(`/api/settings/servers/${editingServer.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
 
     const handleSetDefault = async (serverId: string) => {
         try {
-            await fetch(`http://localhost:3000/api/settings/servers/${serverId}/default`, {
+            await fetch(`/api/settings/servers/${serverId}/default`, {
                 method: 'POST',
             });
             fetchServers(); // Refresh the list
@@ -115,7 +115,7 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
 
     const handleDeleteServer = async (serverId: string) => {
         try {
-            await fetch(`http://localhost:3000/api/settings/servers/${serverId}`, {
+            await fetch(`/api/settings/servers/${serverId}`, {
                 method: 'DELETE',
             });
             setServers(servers.filter(server => server.id !== serverId));
