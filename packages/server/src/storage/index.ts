@@ -56,7 +56,6 @@ export class StorageManager {
     try {
       return await this.getRoute(`${routeId}`);
     } catch (error) {
-      console.log('Route not found', routeId, error);
       return null;
     }
   }

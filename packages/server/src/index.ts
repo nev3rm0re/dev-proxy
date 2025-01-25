@@ -51,7 +51,7 @@ export function startServer(options: ServerOptions = {}) {
   });
 
   // Setup proxy middleware with error handling for all other paths
-  proxyApp.use(/\/.+/, (req, res, next) => {
+  proxyApp.use('/', (req, res, next) => {
     // Ignore favicon.ico requests
     if (req.url === '/favicon.ico') {
       res.status(404).end();

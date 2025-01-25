@@ -88,7 +88,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       
       // Get or create route for tracking
       const route = await storage.getRouteByUrlMethod(urlPath, method) || 
-                   await storage.createRouteFromRequest({ hostname, path: urlPath, method });
+                   await storage.createRouteFromRequest({ hostname, path, method });
       (req as any).route = route;
       console.log('Found route', route, route?.isLocked);
       
@@ -117,13 +117,13 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         return '/' + parts.slice(1).join('/');
       }
       
-      // For domain-like paths, remove the domain
-      if (isDomainLike(parts[0])) {
+      // For domain-like paths, remove the domain and return the rest
+      if (parts.length > 0 && isDomainLike(parts[0])) {
         return '/' + parts.slice(1).join('/');
       }
       
       // For default server, keep the full path
-      return path;
+      return path || '/';
     },
 
     // Changes the origin of the host header to the target URL
