@@ -6,6 +6,7 @@ import { Socket } from 'net';
 import { storage } from '../storage/index.js';
 import { WebSocketManager } from '../websocket/index.js';
 import { ProxyEvent } from '../types/index.js';
+import { determineTargetUrl } from './routing.js';
 
 /**
  * IncomingMessage properties:
@@ -46,51 +47,22 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
     // Lifecycle: Called first when request is received
     router: async (req: IncomingMessage) => {
       const urlPath = (req as Request).originalUrl || req.url || '/';
-      const [firstPart, ...restParts] = urlPath.split('/').filter(Boolean);
-      const path = '/' + restParts.join('/');
       const method = (req as Request).method || 'GET';
 
-      let targetUrl: string;
-      let hostname: string = firstPart;
-      let isServerName = false;
+      // Use determineTargetUrl to get targetUrl, hostname, and isServerName
+      const { targetUrl, hostname, isServerName, resolvedPath } = await determineTargetUrl(req);
 
-      if (isDomainLike(firstPart)) {
-        // Case 1: Domain-like path (/api.example.com/...)
-        targetUrl = `https://${firstPart}`;
-      } else {
-        // Get all servers to check for server name or default
-        const servers = await storage.getServers();
-        
-        if (servers.length === 0) {
-          throw new Error('No servers configured. Please add at least one server in settings.');
-        }
-
-        const serverByName = servers.find(s => s.name === firstPart);
-        
-        if (serverByName) {
-          // Case 2: Server name match (/myserver/...)
-          targetUrl = serverByName.url;
-          hostname = new URL(serverByName.url).hostname;
-          isServerName = true;
-        } else {
-          // Case 3: Default server fallback (/api/...)
-          const defaultServer = servers.find(s => s.isDefault);
-          if (!defaultServer) {
-            throw new Error('No default server configured. Please set a default server in settings.');
-          }
-          targetUrl = defaultServer.url;
-          hostname = new URL(defaultServer.url).hostname;
-        }
+      if (!hostname) {
+        throw new Error('No valid target URL found. Please check server configurations.');
       }
 
       // Store information for pathRewrite
-      (req as any).isServerName = isServerName;
+      (req as any).resolvedPath = resolvedPath;
       
       // Get or create route for tracking
-      const route = await storage.getRouteByUrlMethod(urlPath, method) || 
-                   await storage.createRouteFromRequest({ hostname, path, method });
+      const route = await storage.getRouteByUrlMethod(resolvedPath, method) || 
+                   await storage.createRouteFromRequest({ method, path: resolvedPath, hostname });
       (req as any).route = route;
-      console.log('Found route', route, route?.isLocked);
       
       if (route?.isLocked) {
         const lastResponse = await storage.findLockedResponse(urlPath, method);
@@ -107,23 +79,10 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       return targetUrl;
     },
 
-    // Rewrites the path by removing the project ID prefix
+    // Use resolvedPath from the router()
     // Lifecycle: Called after router, before request is proxied
-    pathRewrite: (path, req) => {
-      const parts = path.split('/').filter(Boolean);
-      
-      // If this was a server name path, remove the server name
-      if ((req as any).isServerName) {
-        return '/' + parts.slice(1).join('/');
-      }
-      
-      // For domain-like paths, remove the domain and return the rest
-      if (parts.length > 0 && isDomainLike(parts[0])) {
-        return '/' + parts.slice(1).join('/');
-      }
-      
-      // For default server, keep the full path
-      return path || '/';
+    pathRewrite: (_path, req) => {
+      return (req as any).resolvedPath;
     },
 
     // Changes the origin of the host header to the target URL
@@ -137,11 +96,10 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         
         if (!cachedResponse) {
           (req as any).startTime = Date.now();
-          return; // exit early
+          return; // continue to target
         }
 
-        proxyReq.destroy();
-
+        proxyReq.destroy(); // cancel request to target
         const body = cachedResponse.lockedBody || cachedResponse.body;
         console.log('Picked response', cachedResponse.body);
 
@@ -154,7 +112,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
 
         const route = (req as any).route;
         const urlPath = (req as Request).originalUrl || req.url || '/';
-        const hostname = getHostnameFromRequest(req);
+        const { hostname } = await determineTargetUrl(req);
 
         const proxyEvent: ProxyEvent = {
           id: Math.random().toString(36).substring(7),

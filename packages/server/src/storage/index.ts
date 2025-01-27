@@ -3,7 +3,7 @@ import { JsonDB, Config } from 'node-json-db';
 import { shortId } from '../utils/hash.js';
 import { ProxyEvent, Route, Response } from '../types/index.js';
 
-interface Server {
+export interface Server {
     id: string;
     name: string;
     url: string;
@@ -51,6 +51,12 @@ export class StorageManager {
     return await this.db.getData(`/routes/${shortId}`);
   }
 
+  /**
+   * Get a route by its URL and method
+   * @param urlPath - The URL path of the route, e.g. /api/v1/users
+   * @param method - The HTTP method of the route, e.g. GET
+   * @returns The route object if found, otherwise null
+   */
   async getRouteByUrlMethod(urlPath: string, method: string): Promise<Route | null> {
     const routeId = shortId(method, urlPath);
     try {
