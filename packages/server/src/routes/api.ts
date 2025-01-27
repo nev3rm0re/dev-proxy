@@ -26,20 +26,12 @@ router.get('/history', async (req, res) => {
   }
 });
 
-router.post('/events/:requestId', async (req, res) => {
+router.put('/events/:requestId', async (req, res) => {
   try {
-    await storage.toggleRouteLock(req.params.requestId);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to lock request' });
-  }
-});
-
-router.post('/events/:requestId/lock', async (req, res) => {
-  try {
-    const route = await storage.toggleRouteLock(req.params.requestId);
+    const route = { ...(await storage.findRoute(req.params.requestId)), isLocked: req.body.isLocked };
+    const data = await storage.saveRoute(route);
     res.json({ 
-      data: route,
+      data,
       success: true,
       message: `Request ${req.params.requestId} ${route.isLocked ? 'locked' : 'unlocked'}`
     });

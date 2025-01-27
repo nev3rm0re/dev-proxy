@@ -7,6 +7,7 @@ import { storage } from '../storage/index.js';
 import { WebSocketManager } from '../websocket/index.js';
 import { ProxyEvent } from '../types/index.js';
 import { determineTargetUrl } from './routing.js';
+import { shortId } from '../utils/hash.js';
 
 /**
  * IncomingMessage properties:
@@ -41,6 +42,45 @@ const getHostnameFromRequest = (req: IncomingMessage): string => {
   return firstPart;
 };
 
+/**
+ * Create ProxyEvent from request and response data
+ */
+const createProxyEvent = async (
+  req: IncomingMessage,
+  responseData: {
+    headers: Record<string, string>;
+    status: number;
+    body: any;
+    targetUrl: string;
+  },
+  startTime: number
+): Promise<ProxyEvent> => {
+  const urlPath = (req as Request).originalUrl || req.url || '/';
+  const hostname = getHostnameFromRequest(req);
+  const method = (req as Request).method || 'GET';
+  const route = (req as any).route;
+
+  const path = (req as any).isServerName || isDomainLike(urlPath.split('/')[1])
+    ? '/' + urlPath.split('/').slice(2).join('/')
+    : urlPath;
+
+  return {
+    id: shortId(urlPath, startTime),
+    hostname,
+    timestamp: startTime,
+    method,
+    path,
+    targetUrl: responseData.targetUrl,
+    requestHeaders: req.headers as Record<string, string>,
+    requestBody: (req as any).body,
+    responseHeaders: responseData.headers,
+    responseStatus: responseData.status,
+    responseBody: responseData.body,
+    duration: Date.now() - startTime,
+    ...route,
+  };
+};
+
 export function createProxyHandler(wsManager: WebSocketManager): RequestHandler {
   return createProxyMiddleware({
     // Determines target URL for each request
@@ -64,14 +104,10 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
                    await storage.createRouteFromRequest({ method, path: resolvedPath, hostname });
       (req as any).route = route;
       
-      if (route?.isLocked) {
-        const lastResponse = await storage.findLockedResponse(urlPath, method);
-        
-        if (lastResponse) {
-          // Attach the cached response to the request for later use
-          (req as any).cachedResponse = lastResponse;
-          (req as any).foundRequest = route;
-        }
+      const lockedResponse = await storage.findLockedResponse(route) || await storage.findRandomResponse(route);
+      if (route.isLocked || lockedResponse) {
+        // Attach the cached response to the request for later use
+        (req as any).cachedResponse = lockedResponse || await storage.findRandomResponse(route);
       }
 
       // Store the target URL for later use
@@ -103,6 +139,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         const body = cachedResponse.lockedBody || cachedResponse.body;
         console.log('Picked response', cachedResponse.body);
 
+        // Send back cached response
         const response = typeof body === 'string' ? body : JSON.stringify(body);
         const headers = {...cachedResponse.headers};
         // update content-length to match responseBody length
@@ -110,27 +147,15 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
         res.writeHead(cachedResponse.status, headers);
         res.end(response);
 
+        // Broadcast the cached response hit
         const route = (req as any).route;
-        const urlPath = (req as Request).originalUrl || req.url || '/';
-        const { hostname } = await determineTargetUrl(req);
-
-        const proxyEvent: ProxyEvent = {
-          id: Math.random().toString(36).substring(7),
-          hostname,
-          timestamp: Date.now(),
-          method: (req as Request).method || 'GET',
-          path: '/' + urlPath.split('/').slice(2).join('/'),
-          targetUrl: 'cache',
-          requestHeaders: req.headers as Record<string, string>,
-          requestBody: (req as any).body,
-          responseHeaders: cachedResponse.headers,
-          responseStatus: cachedResponse.status,
-          responseBody: cachedResponse.body,
-          duration: 0,
-          ...route,
-        };
+        const proxyEvent = await createProxyEvent(req, {
+          headers: cachedResponse.headers,
+          status: cachedResponse.status,
+          body: cachedResponse.body,
+          targetUrl: 'cache'
+        }, Date.now());
         
-        // increment hits
         route.hits++;
         await storage.saveRoute(route);
 
@@ -143,40 +168,25 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       // Lifecycle: After target responds, before sending back to client
       proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage) => {
         const startTime = (req as any).startTime;
-        const urlPath = (req as Request).originalUrl || req.url || '/';
-        const hostname = getHostnameFromRequest(req);
-
-        // Get the path without the first part (domain or server name)
-        const path = (req as any).isServerName || isDomainLike(urlPath.split('/')[1])
-          ? '/' + urlPath.split('/').slice(2).join('/')
-          : urlPath;
-
         const route = (req as any).route;
-
-        const proxyEvent: ProxyEvent = {
-          id: Math.random().toString(36).substring(7),
-          hostname,
-          timestamp: startTime,
-          method: (req as Request).method || 'GET',
-          path,
-          targetUrl: (req as any).target,
-          requestHeaders: req.headers as Record<string, string>,
-          requestBody: (req as any).body,
-          responseHeaders: proxyRes.headers as Record<string, string>,
-          responseStatus: proxyRes.statusCode,
-          responseBody: '',
-          ...route,
-        };
 
         let body = '';
         proxyRes.on('data', chunk => body += chunk);
-        proxyRes.on('end', () => {
-          proxyEvent.duration = Date.now() - startTime;
+        proxyRes.on('end', async () => {
+          let parsedBody;
           try {
-            proxyEvent.responseBody = JSON.parse(body);
+            parsedBody = JSON.parse(body);
           } catch {
-            proxyEvent.responseBody = body;
+            parsedBody = body;
           }
+
+          const proxyEvent = await createProxyEvent(req, {
+            headers: proxyRes.headers as Record<string, string>,
+            status: proxyRes.statusCode!,
+            body: parsedBody,
+            targetUrl: (req as any).target
+          }, startTime);
+
           storage.addRouteResponse(route, proxyEvent);
           wsManager.broadcast(proxyEvent);
         });

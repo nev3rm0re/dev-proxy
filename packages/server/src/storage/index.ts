@@ -32,22 +32,22 @@ export class StorageManager {
     await this.db.push(path, data);
   }
 
-  async createRoute(data: Omit<Route, 'id'>): Promise<Route | null> {
+  async createRoute(data: Omit<Route, 'id'>): Promise<Route> {
     const routeId = shortId(data.method, data.path);
     return await this.saveRoute({ id: routeId, ...data });
   }
 
-  async saveRoute(data: Route): Promise<Route | null> {
+  async saveRoute(data: Route): Promise<Route> {
     try {
       await this.db.push(`/routes/${data.id}`, data);
       return await this.getRoute(data.id);
     } catch (error) {
       console.error('Error saving route', error);
-      return null;
+      throw error;
     }
   }
 
-  async getRoute(shortId: string): Promise<Route | null> {
+  async getRoute(shortId: string): Promise<Route> {
     return await this.db.getData(`/routes/${shortId}`);
   }
 
@@ -66,7 +66,7 @@ export class StorageManager {
     }
   }
 
-  async createRouteFromRequest({ method, path, hostname }: { method: string, path: string, hostname: string}): Promise<Route | null> {
+  async createRouteFromRequest({ method, path, hostname }: { method: string, path: string, hostname: string}): Promise<Route> {
     const route: Omit<Route, 'id'> = {
       method,
       path,
@@ -96,25 +96,12 @@ export class StorageManager {
     return response;
   }
 
-  async findLastResponse(path: string, method: string): Promise<Response | null> {
-    const route = await this.getRouteByUrlMethod(path, method);
-    return route?.responses[0] || null;
+  async findRandomResponse(route: Route): Promise<Response | null> {
+    return route.responses?.length ? route.responses[Math.floor(Math.random() * route.responses.length)] : null;
   }
 
-  async findRandomResponse(path: string, method: string): Promise<Response | null> {
-    const route = await this.getRouteByUrlMethod(path, method);
-    return route?.responses[Math.floor(Math.random() * route.responses.length)] || null;
-  }
-
-  async findLockedResponse(path: string, method: string): Promise<Response | null> {
-    const route = await this.getRouteByUrlMethod(path, method);
-    const lockedResponse = route?.responses.find(r => r.isLocked) || null;
-
-    if (lockedResponse) {
-      return lockedResponse;
-    }
-
-    return this.findRandomResponse(path, method);
+  async findLockedResponse(route: Route): Promise<Response | null> {
+    return route.responses?.find(r => r.isLocked) || this.findRandomResponse(route);
   }
 
   async getRoutes(): Promise<Record<string, Route>> {
@@ -146,6 +133,15 @@ export class StorageManager {
     route.responses.push(normalizedResponse);
 
     await this.saveRoute(route);
+  }
+
+  async findRoute(routeId: string): Promise<Route> {
+    const routes = await this.getRoutes();
+    const route = routes[routeId];
+    if (!route) {
+      throw new Error(`Route ${routeId} not found`);
+    }
+    return route;
   }
 
   async toggleRouteLock(routeId: string): Promise<Route> {

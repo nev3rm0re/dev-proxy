@@ -24,8 +24,12 @@ export const Layout = () => {
 
     const handleLockEvent = async (eventId: string) => {
         try {
-            const response = await fetch(`/api/events/${eventId}/lock`, {
-                method: 'POST',
+            const response = await fetch(`/api/events/${eventId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ isLocked: true }),
+                headers: {
+                    'Content-Type': 'application/json'
+                },
             });
 
             const data = await response.json();
