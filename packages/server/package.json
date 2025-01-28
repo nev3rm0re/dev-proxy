@@ -6,7 +6,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org"
   },
-  "version": "0.5.3",
+  "version": "0.5.4",
   "exports": "./dist/cli.js",
   "types": "dist/index.d.ts",
   "files": [
