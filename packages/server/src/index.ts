@@ -5,8 +5,10 @@ import cors from 'cors';
 import { WebSocketManager } from './websocket/index.js';
 import { createProxyHandler } from './proxy/index.js';
 import apiRouter from './routes/api.js';
-import proxy from 'http-proxy';
+import { fileURLToPath } from 'url';
 import path from 'path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface ServerOptions {
   port?: number;
