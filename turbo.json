@@ -7,13 +7,6 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "build:client": {
-      "outputs": ["dist/**"]
-    },
-    "build:server": {
-      "dependsOn": ["build:client"],
-      "outputs": ["dist/**"]
-    },
     "dev": {
       "persistent": true,
       "cache": false

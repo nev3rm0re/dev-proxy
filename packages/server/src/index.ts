@@ -28,8 +28,9 @@ export function startServer(options: ServerOptions = {}) {
 
   adminApp.use('/api', apiRouter);        // Server's own API endpoints
 
-  adminApp.use(express.static('../public')); 
-  adminApp.get('*', (req, res) => {
+  adminApp.use(express.static(path.join(__dirname, '../public'))); 
+  
+  adminApp.get('/*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public', 'index.html'));
   });
   

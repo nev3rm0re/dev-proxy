@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ProxyResponse } from "@/types/proxy";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Settings } from "./Settings";
+import { BuildHashBadge } from "./BuildHashBadge";
 
 export const Layout = () => {
     const wsUrl = `/ws`;
@@ -91,11 +92,12 @@ export const Layout = () => {
             }
         }
     };
+    console.log('import.meta.env', import.meta.env);
 
     return (
         <div className="flex flex-col h-screen bg-gray-900">
             <div className="p-3 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
+                <div className="flex items-center gap-2">
                     <button
                         className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors"
                         onClick={handleClearEvents}
@@ -103,11 +105,6 @@ export const Layout = () => {
                         <Trash2 size={16} />
                         <span className="text-sm">Clear Log</span>
                     </button>
-                    {import.meta.env.VITE_GIT_COMMIT_HASH && (
-                        <span className="text-xs text-muted-foreground">
-                            Build: {import.meta.env.VITE_GIT_COMMIT_HASH.slice(0, 7)}
-                        </span>
-                    )}
                 </div>
                 <div className="flex items-center gap-4">
                     <button
@@ -134,6 +131,7 @@ export const Layout = () => {
                 />
             </div>
             <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+            <BuildHashBadge />
         </div>
     );
 };

@@ -1,12 +1,13 @@
 {
-  "name": "client",
+  "name": "@4ev3rm0re/dev-proxy-dashboard",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "rm -rf dist && mkdir -p dist && git rev-parse HEAD > .env",
+    "prebuild": "rm -rf dist && mkdir -p dist && echo \"VITE_GIT_COMMIT_HASH=$(git rev-parse HEAD)\" > .env",
     "build": "tsc -b && vite build --outDir dist",
+    "postbuild": "mkdir -p ../server/public && cp -r dist/* ../server/public/",
     "lint": "eslint .",
     "preview": "vite preview"
   },
