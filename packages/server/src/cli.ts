@@ -13,17 +13,16 @@ program
   .name('dev-proxy')
   .description('Development proxy server for API monitoring')
   .version(packageJson.version)
-  .option('-p, --port <number>', 'port to run on', '3000')
+  .option('-p, --proxy-port <number>', 'proxy port to run on', '3000')
+  .option('-a, --admin-port <number>', 'admin dashboard port to run on', '3001')
   .option('-s, --storage <path>', 'storage file path', './proxyDB.json');
 
 program.parse();
 
 const options = program.opts();
 
-startServer({
-  port: parseInt(options.port),
+await startServer({
+  proxyPort: parseInt(options.proxyPort),
+  adminPort: parseInt(options.adminPort),
   storagePath: options.storage
 });
-
-console.log(`Dev Proxy running on port ${options.port}`);
-console.log(`Storage file: ${path.resolve(options.storage)}`);

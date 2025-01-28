@@ -7,18 +7,59 @@ import { createProxyHandler } from './proxy/index.js';
 import apiRouter from './routes/api.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import open from 'open';
+import http from 'http';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface ServerOptions {
-  port?: number;
+  proxyPort?: number;
+  adminPort?: number;
   storagePath?: string;
 }
 
-const PROXY_PORT = process.env.PROXY_PORT || 3000;
-const ADMIN_PORT = process.env.ADMIN_PORT || 3001;
+const DEFAULT_PROXY_PORT = 3000;
+const DEFAULT_ADMIN_PORT = 3001;
 
-export function startServer(options: ServerOptions = {}) {
+async function findAvailablePort(startPort: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    
+    server.listen(startPort, () => {
+      const { port } = server.address() as { port: number };
+      server.close(() => resolve(port));
+    });
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        // Try the next port pair (increment by 10)
+        resolve(findAvailablePort(startPort + 10));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function isUrlAccessible(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    http.get(url, (res) => {
+      resolve(res.statusCode === 200);
+      res.resume();
+    }).on('error', () => {
+      resolve(false);
+    });
+  });
+}
+
+export async function startServer(options: ServerOptions = {}) {
+  const proxyPort = options.proxyPort || DEFAULT_PROXY_PORT;
+  const adminPort = options.adminPort || DEFAULT_ADMIN_PORT;
+
+  // Find available ports
+  const actualProxyPort = await findAvailablePort(proxyPort);
+  const actualAdminPort = await findAvailablePort(adminPort);
+
   // Admin/Frontend application
   const adminApp = express();
   const adminServer = createServer(adminApp);
@@ -51,7 +92,7 @@ export function startServer(options: ServerOptions = {}) {
           <p>This is a proxy server. To use it correctly, you should:</p>
           <ul>
             <li>Access specific project endpoints using the project ID in the path</li>
-            <li>Example: http://localhost:${PROXY_PORT}/[project-id]/your-path</li>
+            <li>Example: http://localhost:${actualProxyPort}/[server.or.hostname]/your-path</li>
           </ul>
           <p>Direct access to the root path is not supported.</p>
         </body>
@@ -86,12 +127,33 @@ export function startServer(options: ServerOptions = {}) {
   proxyApp.use(errorHandler);
 
   // Start the servers using the HTTP server instances
-  proxyServer.listen(PROXY_PORT, () => {
-    console.log(`Proxy server running on port ${PROXY_PORT}`);
+  proxyServer.listen(actualProxyPort, () => {
+    console.log(`Proxy server running on port ${actualProxyPort}`);
   });
 
-  adminServer.listen(ADMIN_PORT, () => {
-    console.log(`Admin dashboard available at: http://localhost:${ADMIN_PORT}`);
+  adminServer.listen(actualAdminPort, async () => {
+    console.log(`Admin dashboard available at: http://localhost:${actualAdminPort}`);
+    
+    // Wait a short moment for the server to be fully ready
+    setTimeout(async () => {
+      const adminUrl = `http://localhost:${actualAdminPort}`;
+      
+      // Check if the dashboard is already open by trying to connect to it
+      const isOpen = await isUrlAccessible(adminUrl);
+      
+      if (!isOpen) {
+        // If not open, launch the browser
+        await open(adminUrl, {
+          wait: false,  // Don't wait for the browser window to close
+          app: {
+            name: 'chrome',  // Prefer Chrome if available
+            arguments: ['--new-window']
+          }
+        }).catch((err: any) => {
+          console.error('Failed to open browser:', err);
+        });
+      }
+    }, 1000);  // Wait 1 second before checking
   });
 
   process.on('unhandledRejection', (reason, promise) => {
