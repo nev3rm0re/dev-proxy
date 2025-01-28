@@ -30,7 +30,7 @@ export function startServer(options: ServerOptions = {}) {
 
   adminApp.use(express.static('public')); 
   adminApp.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
   });
   
   // Attach WebSocket to the admin server
