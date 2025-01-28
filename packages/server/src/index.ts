@@ -6,6 +6,7 @@ import { WebSocketManager } from './websocket/index.js';
 import { createProxyHandler } from './proxy/index.js';
 import apiRouter from './routes/api.js';
 import proxy from 'http-proxy';
+import path from 'path';
 
 interface ServerOptions {
   port?: number;
@@ -22,8 +23,13 @@ export function startServer(options: ServerOptions = {}) {
   
   adminApp.use(cors());
   adminApp.use(express.json());
-  adminApp.use(express.static('public')); // React build files
+
   adminApp.use('/api', apiRouter);        // Server's own API endpoints
+
+  adminApp.use(express.static('public')); 
+  adminApp.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  });
   
   // Attach WebSocket to the admin server
   const wsManager = new WebSocketManager(adminServer);
