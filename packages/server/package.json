@@ -19,12 +19,12 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx watch src/cli.ts",
-    "build": "yarn run build:server && yarn run copy-client",
-    "build:server": "tsc",
+    "build": "yarn clean && yarn run build:server && yarn run copy-client",
+    "build:server": "tsc && test -d dist && test \"$(ls -A dist)\" || (echo 'Error: dist folder is empty' && exit 1)",
     "copy-client": "mkdir -p public && cp -r ../client/dist/* public/",
-    "npm-publish": "node scripts/publish.js",
+    "npm-publish": "yarn build && node scripts/publish.js",
     "clean": "rm -rf dist",
-    "start": "node dist/cli.js",
+  "start": "node dist/cli.js",
     "setup": "ts-node src/test-setup.ts",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:watch": "jest --watch"

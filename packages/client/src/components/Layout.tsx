@@ -95,13 +95,20 @@ export const Layout = () => {
     return (
         <div className="flex flex-col h-screen bg-gray-900">
             <div className="p-3 flex items-center justify-between">
-                <button
-                    className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors"
-                    onClick={handleClearEvents}
-                >
-                    <Trash2 size={16} />
-                    <span className="text-sm">Clear Log</span>
-                </button>
+                <div className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors">
+                    <button
+                        className="flex items-center gap-2 text-red-500 hover:text-red-400 transition-colors"
+                        onClick={handleClearEvents}
+                    >
+                        <Trash2 size={16} />
+                        <span className="text-sm">Clear Log</span>
+                    </button>
+                    {import.meta.env.VITE_GIT_COMMIT_HASH && (
+                        <span className="text-xs text-muted-foreground">
+                            Build: {import.meta.env.VITE_GIT_COMMIT_HASH.slice(0, 7)}
+                        </span>
+                    )}
+                </div>
                 <div className="flex items-center gap-4">
                     <button
                         className="text-muted-foreground hover:text-white transition-colors"

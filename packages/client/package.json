@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "rm -rf dist && mkdir -p dist && git rev-parse HEAD > .env",
     "build": "tsc -b && vite build --outDir dist",
     "lint": "eslint .",
     "preview": "vite preview"
