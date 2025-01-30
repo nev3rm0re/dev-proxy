@@ -1,4 +1,6 @@
 // packages/server/src/types/index.ts
+import { OpenAPIV3 } from 'openapi-types';
+
 export interface Response {
   responseId: string;
   body: any;
@@ -41,6 +43,7 @@ export interface ProxyEvent {
   responseBody?: any; // body of the response
   responseStatus?: number; // status of the response
   duration?: number;
+  openapi?: OpenAPIV3.Document;
 }
 
 export interface ProjectConfig {

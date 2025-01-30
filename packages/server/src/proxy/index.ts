@@ -1,6 +1,6 @@
 // packages/server/src/proxy/index.ts
 import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
-import { Request } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { IncomingMessage, ServerResponse } from 'http';
 import { Socket } from 'net';
 import { storage } from '../storage/index.js';
@@ -8,6 +8,7 @@ import { WebSocketManager } from '../websocket/index.js';
 import { ProxyEvent } from '../types/index.js';
 import { determineTargetUrl } from './routing.js';
 import { shortId } from '../utils/hash.js';
+import { OpenAPIRecorder } from '../services/OpenAPIRecorder.js';
 
 /**
  * IncomingMessage properties:
@@ -80,6 +81,8 @@ const createProxyEvent = async (
     ...route,
   };
 };
+
+const openAPIRecorder = new OpenAPIRecorder();
 
 export function createProxyHandler(wsManager: WebSocketManager): RequestHandler {
   return createProxyMiddleware({
@@ -166,7 +169,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
 
       // Called when response is received from target
       // Lifecycle: After target responds, before sending back to client
-      proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage) => {
+      proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage, res: ServerResponse) => {
         const startTime = (req as any).startTime;
         const route = (req as any).route;
 
@@ -180,12 +183,21 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
             parsedBody = body;
           }
 
+          // Store response body for OpenAPI recording
+          (res as any).responseBody = parsedBody;
+
+          // Record the request/response pair
+          openAPIRecorder.recordRequest(req as Request, res, startTime);
+
           const proxyEvent = await createProxyEvent(req, {
             headers: proxyRes.headers as Record<string, string>,
             status: proxyRes.statusCode!,
             body: parsedBody,
             targetUrl: (req as any).target
           }, startTime);
+
+          // Add OpenAPI spec to the event
+          proxyEvent.openapi = openAPIRecorder.getSpec();
 
           storage.addRouteResponse(route, proxyEvent);
           wsManager.broadcast(proxyEvent);

@@ -160,5 +160,5 @@ export async function startServer(options: ServerOptions = {}) {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   });
 
-  return adminServer;
+  return { adminServer, proxyServer };
 }

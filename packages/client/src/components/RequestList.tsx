@@ -5,6 +5,7 @@ import { ResponseList } from '@/components/ResponseList';
 import { ProxyEvent } from '@/types/proxy';
 import { LockButton } from '@/components/ui/lock-button';
 import { cn } from "@/lib/utils";
+import { groupBy } from 'lodash';
 
 interface RequestListProps {
   events: ProxyEvent[];
@@ -13,6 +14,8 @@ interface RequestListProps {
   onLockResponse: (eventId: string, responseId: string) => void;
   onEditResponse: (eventId: string, responseId: string, newBody: string) => void;
 }
+
+const PRIORITY_METHODS = ['post', 'put', 'get', 'delete'];
 
 export const RequestList: React.FC<RequestListProps> = ({ 
   events, 
@@ -33,6 +36,8 @@ export const RequestList: React.FC<RequestListProps> = ({
     setExpandedPath(expandedPath === path ? null : path);
   };
 
+  const groupedRequests = groupBy(events, 'path');
+
   return (
     <div className="h-full flex flex-col bg-gray-900">
       <div className="grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 text-sm text-gray-400">
@@ -47,50 +52,91 @@ export const RequestList: React.FC<RequestListProps> = ({
       </div>
 
       <div className="flex-1 overflow-auto">
-        {events.map((event) => (
-          <Collapsible key={event.path} open={expandedPath === event.path} className="relative">
-            <CollapsibleTrigger asChild>
-              <div
-                onClick={() => handleToggleExpand(event.path)}
-                className={cn(
-                  "sticky top-0 z-10 self-start grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800 bg-gray-900",
-                  event.path === incomingEventId && 'animate-pulse-gradient'
-                )}
-              >
-                <div className="text-gray-300 flex items-baseline w-6 mt-1">
-                  {expandedPath === event.path ? 
-                    <ChevronDown size={18} className="text-gray-300 hover:text-white transition-colors" /> : 
-                    <ChevronRight size={18} className="text-gray-300 hover:text-white transition-colors" />
-                  }
-                </div>
-                <div className="text-gray-300 truncate">
-                  {event.hostname}
-                  {event.path}
-                </div>
-                <div className="flex justify-between items-center gap-4">
-                  <span className="text-gray-400 text-sm">{event.hits}</span>
-                  <LockButton
-                    isLocked={event.isLocked}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onLockEvent(event.id);
-                    }}
-                  />
-                </div>
+        {Object.entries(groupedRequests).map(([path, pathRequests]) => {
+          const methodGroups = groupBy(pathRequests, 'method');
+          
+          return (
+            <div key={path} className="mb-4 border-b border-gray-200">
+              <h3 className="font-medium">{path}</h3>
+              <div className="ml-4">
+                {Object.entries(methodGroups)
+                  .sort(([methodA], [methodB]) => {
+                    const priorityA = PRIORITY_METHODS.indexOf(methodA.toLowerCase());
+                    const priorityB = PRIORITY_METHODS.indexOf(methodB.toLowerCase());
+                    if (priorityA === -1) return 1;
+                    if (priorityB === -1) return -1;
+                    return priorityA - priorityB;
+                  })
+                  .map(([method, requests]) => (
+                    <div key={method} className="mb-2">
+                      <span className={`text-xs font-mono ${getMethodColor(method)}`}>
+                        {method.toUpperCase()}
+                      </span>
+                      {requests.map(request => (
+                        <Collapsible key={request.id} open={expandedPath === request.path} className="relative">
+                          <CollapsibleTrigger asChild>
+                            <div
+                              onClick={() => handleToggleExpand(request.path)}
+                              className={cn(
+                                "sticky top-0 z-10 self-start grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800 bg-gray-900",
+                                request.path === incomingEventId && 'animate-pulse-gradient'
+                              )}
+                            >
+                              <div className="text-gray-300 flex items-baseline w-6 mt-1">
+                                {expandedPath === request.path ? 
+                                  <ChevronDown size={18} className="text-gray-300 hover:text-white transition-colors" /> : 
+                                  <ChevronRight size={18} className="text-gray-300 hover:text-white transition-colors" />
+                                }
+                              </div>
+                              <div className="text-gray-300 truncate">
+                                {request.hostname}
+                                {request.path}
+                              </div>
+                              <div className="flex justify-between items-center gap-4">
+                                <span className="text-gray-400 text-sm">{request.hits}</span>
+                                <LockButton
+                                  isLocked={request.isLocked}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onLockEvent(request.id);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <ResponseList
+                              route={request}
+                              responses={request.responses}
+                              onLockResponse={(responseId) => onLockResponse(request.id, responseId)}
+                              onEditResponse={(responseId, newBody) => onEditResponse(request.id, responseId, newBody)}
+                            />
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </div>
+                  ))}
               </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <ResponseList
-                route={event}
-                responses={event.responses}
-                onLockResponse={(responseId) => onLockResponse(event.id, responseId)}
-                onEditResponse={(responseId, newBody) => onEditResponse(event.id, responseId, newBody)}
-              />
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
+
+function getMethodColor(method: string): string {
+  switch (method.toLowerCase()) {
+    case 'post':
+      return 'text-green-500';
+    case 'put':
+      return 'text-blue-500';
+    case 'get':
+      return 'text-yellow-500';
+    case 'delete':
+      return 'text-red-500';
+    default:
+      return 'text-gray-500';
+  }
+}
 
