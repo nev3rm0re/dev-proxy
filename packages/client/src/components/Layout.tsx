@@ -1,7 +1,7 @@
 import { useProxyStore } from "@/store/proxyStore";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { RequestList } from "./RequestList";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ProxyResponse } from "@/types/proxy";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Settings } from "./Settings";
@@ -12,6 +12,7 @@ export const Layout = () => {
     const { isConnected } = useWebSocket(wsUrl);
     const { events, setEvents, incomingEventId, updateEvent, getEvent } = useProxyStore();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [filterTerm, setFilterTerm] = useState('');
 
     useEffect(() => {
         // Make an api call to get the initial events
@@ -93,7 +94,33 @@ export const Layout = () => {
             }
         }
     };
-    console.log('import.meta.env', import.meta.env);
+
+    const filteredEvents = React.useMemo(() => events.map(event => {
+        if (!filterTerm.trim()) return event;
+        
+        const searchTerm = filterTerm.trim().toLowerCase();
+        
+        // Check if path matches
+        const pathMatches = event.path.toLowerCase().includes(searchTerm);
+        
+        // Filter responses that match the search term
+        const filteredResponses = event.responses.filter(response => 
+            response.body && 
+            typeof response.body === 'object' &&
+            JSON.stringify(response.body).toLowerCase().includes(searchTerm)
+        );
+        
+        // If path matches or there are matching responses, return modified event
+        if (pathMatches || filteredResponses.length > 0) {
+            return {
+                ...event,
+                responses: pathMatches ? event.responses : filteredResponses
+            };
+        }
+        
+        // If no matches, return null
+        return null;
+    }).filter(Boolean) as typeof events, [events, filterTerm]);
 
     return (
         <div className="flex flex-col h-screen bg-gray-900">
@@ -106,6 +133,13 @@ export const Layout = () => {
                         <Trash2 size={16} />
                         <span className="text-sm">Clear Log</span>
                     </button>
+                    <input
+                        type="text"
+                        placeholder="Filter requests..."
+                        value={filterTerm}
+                        onChange={(e) => setFilterTerm(e.target.value)}
+                        className="ml-4 px-3 py-1 bg-gray-800 text-white rounded border border-gray-700 focus:outline-none focus:border-gray-500"
+                    />
                 </div>
                 <div className="flex items-center gap-4">
                     <button
@@ -124,7 +158,7 @@ export const Layout = () => {
             </div>
             <div className="flex-1">
                 <RequestList
-                    events={events}
+                    events={filteredEvents}
                     incomingEventId={incomingEventId}
                     onLockEvent={handleLockEvent}
                     onLockResponse={handleLockResponse}

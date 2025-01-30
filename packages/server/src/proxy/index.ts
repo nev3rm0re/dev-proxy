@@ -107,7 +107,7 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
                    await storage.createRouteFromRequest({ method, path: resolvedPath, hostname });
       (req as any).route = route;
       
-      const lockedResponse = await storage.findLockedResponse(route) || await storage.findRandomResponse(route);
+      const lockedResponse = await storage.findLockedResponse(route);
       if (route.isLocked || lockedResponse) {
         // Attach the cached response to the request for later use
         (req as any).cachedResponse = lockedResponse || await storage.findRandomResponse(route);
@@ -185,9 +185,8 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
 
           // Store response body for OpenAPI recording
           (res as any).responseBody = parsedBody;
-
           // Record the request/response pair
-          openAPIRecorder.recordRequest(req as Request, res, startTime);
+          openAPIRecorder.recordRequest(req as Request, res as unknown as Response, startTime);
 
           const proxyEvent = await createProxyEvent(req, {
             headers: proxyRes.headers as Record<string, string>,

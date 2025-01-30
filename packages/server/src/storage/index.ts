@@ -100,8 +100,10 @@ export class StorageManager {
     return route.responses?.length ? route.responses[Math.floor(Math.random() * route.responses.length)] : null;
   }
 
-  async findLockedResponse(route: Route): Promise<Response | null> {
-    return route.responses?.find(r => r.isLocked) || this.findRandomResponse(route);
+  async findLockedResponse(route: Route): Promise<Response | undefined> {
+    const lockedResponses = route.responses?.filter(r => r.isLocked);
+    if (!lockedResponses?.length) return undefined;
+    return lockedResponses[Math.floor(Math.random() * lockedResponses.length)];
   }
 
   async getRoutes(): Promise<Record<string, Route>> {
