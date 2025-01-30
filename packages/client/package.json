@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@4ev3rm0re/dev-proxy-types": "*",
     "@radix-ui/react-collapsible": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.1",
     "@shadcn/ui": "^0.0.4",

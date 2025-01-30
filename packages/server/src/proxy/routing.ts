@@ -1,5 +1,5 @@
 // packages/server/src/proxy/routing.ts
-import { IncomingMessage } from 'http';
+import type { IncomingMessage } from 'http';
 import { storage } from '../storage/index.js';
 
 const isDomainLike = (str: string): boolean => {

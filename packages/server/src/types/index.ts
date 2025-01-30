@@ -1,9 +1,9 @@
 // packages/server/src/types/index.ts
-import { OpenAPIV3 } from 'openapi-types';
+import type { OpenAPIV3 } from "openapi-types";
 
 export interface Response {
   responseId: string;
-  body: any;
+  body: unknown;
   status: number | undefined;
   headers?: Record<string, string>;
   count: number;
@@ -38,9 +38,9 @@ export interface ProxyEvent {
   path: string; // path of the request
   targetUrl: string; // target url of the request, projectId + path
   requestHeaders: Record<string, string>; // headers of the request
-  requestBody?: any; // body of the request
+  requestBody?: unknown; // body of the request
   responseHeaders?: Record<string, string>; // headers of the response
-  responseBody?: any; // body of the response
+  responseBody?: unknown; // body of the response
   responseStatus?: number; // status of the response
   duration?: number;
   openapi?: OpenAPIV3.Document;

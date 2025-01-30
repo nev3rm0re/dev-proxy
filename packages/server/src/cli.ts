@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { program } from 'commander';
 import { startServer } from './index.js';
-import path from 'path';
 import { readFileSync } from 'fs';
 
 // Read version from package.json

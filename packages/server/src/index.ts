@@ -1,22 +1,20 @@
+/// <reference types="node" />
+
 // packages/server/src/index.ts
-import express from 'express';
-import { createServer } from 'http';
-import cors from 'cors';
-import { WebSocketManager } from './websocket/index.js';
-import { createProxyHandler } from './proxy/index.js';
-import apiRouter from './routes/api.js';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import open from 'open';
-import http from 'http';
+import express from "express";
+import { createServer } from "http";
+import cors from "cors";
+import { WebSocketManager } from "./websocket/index.js";
+import { createProxyHandler } from "./proxy/index.js";
+import apiRouter from "./routes/api.js";
+import { fileURLToPath } from "url";
+import path from "path";
+import open from "open";
+import http from "http";
+import type { ErrorRequestHandler } from "express";
+import type { ServerOptions } from "./types/server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-interface ServerOptions {
-  proxyPort?: number;
-  adminPort?: number;
-  storagePath?: string;
-}
 
 const DEFAULT_PROXY_PORT = 3000;
 const DEFAULT_ADMIN_PORT = 3001;
@@ -24,14 +22,14 @@ const DEFAULT_ADMIN_PORT = 3001;
 async function findAvailablePort(startPort: number): Promise<number> {
   return new Promise((resolve, reject) => {
     const server = createServer();
-    
+
     server.listen(startPort, () => {
       const { port } = server.address() as { port: number };
       server.close(() => resolve(port));
     });
 
-    server.on('error', (err: NodeJS.ErrnoException) => {
-      if (err.code === 'EADDRINUSE') {
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE") {
         // Try the next port pair (increment by 10)
         resolve(findAvailablePort(startPort + 10));
       } else {
@@ -43,12 +41,14 @@ async function findAvailablePort(startPort: number): Promise<number> {
 
 async function isUrlAccessible(url: string): Promise<boolean> {
   return new Promise((resolve) => {
-    http.get(url, (res) => {
-      resolve(res.statusCode === 200);
-      res.resume();
-    }).on('error', () => {
-      resolve(false);
-    });
+    http
+      .get(url, (res) => {
+        resolve(res.statusCode === 200);
+        res.resume();
+      })
+      .on("error", () => {
+        resolve(false);
+      });
   });
 }
 
@@ -63,27 +63,27 @@ export async function startServer(options: ServerOptions = {}) {
   // Admin/Frontend application
   const adminApp = express();
   const adminServer = createServer(adminApp);
-  
+
   adminApp.use(cors());
   adminApp.use(express.json());
 
-  adminApp.use('/api', apiRouter);        // Server's own API endpoints
+  adminApp.use("/api", apiRouter); // Server's own API endpoints
 
-  adminApp.use(express.static(path.join(__dirname, '../public'))); 
-  
-  adminApp.get('/*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+  adminApp.use(express.static(path.join(__dirname, "../public")));
+
+  adminApp.get("/*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../public", "index.html"));
   });
-  
+
   // Attach WebSocket to the admin server
   const wsManager = new WebSocketManager(adminServer);
-  
+
   // Proxy application
   const proxyApp = express();
   const proxyServer = createServer(proxyApp);
-  
+
   // Add handler for root path
-  proxyApp.get('/', (req, res) => {
+  proxyApp.get("/", (req, res) => {
     res.send(`
       <html>
         <head><title>Proxy Server</title></head>
@@ -101,16 +101,16 @@ export async function startServer(options: ServerOptions = {}) {
   });
 
   // Setup proxy middleware with error handling for all other paths
-  proxyApp.use('/', (req, res, next) => {
+  proxyApp.use("/", (req, res, next) => {
     // Ignore favicon.ico requests
-    if (req.url === '/favicon.ico') {
+    if (req.url === "/favicon.ico") {
       res.status(404).end();
       return;
     }
 
     createProxyHandler(wsManager)(req, res, (err) => {
-      if (err?.message?.includes('No target URL found for project')) {
-        res.status(404).json({ error: 'Not Found', message: err.message });
+      if (err?.message?.includes("No target URL found for project")) {
+        res.status(404).json({ error: "Not Found", message: err.message });
       } else {
         next(err);
       }
@@ -118,9 +118,11 @@ export async function startServer(options: ServerOptions = {}) {
   });
 
   // Error handling middleware for both servers
-  const errorHandler = (err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const errorHandler: ErrorRequestHandler = (err, req, res) => {
     console.error(err.stack);
-    res.status(500).json({ error: 'Internal Server Error', message: err.message });
+    res
+      .status(500)
+      .json({ error: "Internal Server Error", message: err.message });
   };
 
   adminApp.use(errorHandler);
@@ -132,32 +134,34 @@ export async function startServer(options: ServerOptions = {}) {
   });
 
   adminServer.listen(actualAdminPort, async () => {
-    console.log(`Admin dashboard available at: http://localhost:${actualAdminPort}`);
-    
+    console.log(
+      `Admin dashboard available at: http://localhost:${actualAdminPort}`
+    );
+
     // Wait a short moment for the server to be fully ready
     setTimeout(async () => {
       const adminUrl = `http://localhost:${actualAdminPort}`;
-      
+
       // Check if the dashboard is already open by trying to connect to it
       const isOpen = await isUrlAccessible(adminUrl);
-      
+
       if (!isOpen) {
         // If not open, launch the browser
         await open(adminUrl, {
-          wait: false,  // Don't wait for the browser window to close
+          wait: false, // Don't wait for the browser window to close
           app: {
-            name: 'chrome',  // Prefer Chrome if available
-            arguments: ['--new-window']
-          }
-        }).catch((err: any) => {
-          console.error('Failed to open browser:', err);
+            name: "chrome", // Prefer Chrome if available
+            arguments: ["--new-window"],
+          },
+        }).catch((err: Error) => {
+          console.error("Failed to open browser:", err);
         });
       }
-    }, 1000);  // Wait 1 second before checking
+    }, 1000); // Wait 1 second before checking
   });
 
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
   });
 
   return { adminServer, proxyServer };

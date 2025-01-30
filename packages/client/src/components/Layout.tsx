@@ -2,7 +2,7 @@ import { useProxyStore } from "@/store/proxyStore";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { RequestList } from "./RequestList";
 import React, { useEffect, useState } from "react";
-import { ProxyResponse } from "@/types/proxy";
+import type { ProxyResponse } from "@/types/proxy";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Settings } from "./Settings";
 import { BuildHashBadge } from "./BuildHashBadge";

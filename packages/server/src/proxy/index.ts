@@ -1,14 +1,20 @@
 // packages/server/src/proxy/index.ts
-import { createProxyMiddleware, RequestHandler } from 'http-proxy-middleware';
-import { Request, Response, NextFunction } from 'express';
-import { IncomingMessage, ServerResponse } from 'http';
-import { Socket } from 'net';
-import { storage } from '../storage/index.js';
-import { WebSocketManager } from '../websocket/index.js';
-import { ProxyEvent } from '../types/index.js';
-import { determineTargetUrl } from './routing.js';
-import { shortId } from '../utils/hash.js';
-import { OpenAPIRecorder } from '../services/OpenAPIRecorder.js';
+import type { RequestHandler } from "http-proxy-middleware";
+import { createProxyMiddleware } from "http-proxy-middleware";
+import type { Request, Response } from "express";
+import type { IncomingMessage } from "http";
+import { ServerResponse } from "http";
+import type { Socket } from "net";
+import { storage } from "../storage/index.js";
+import type { WebSocketManager } from "../websocket/index.js";
+import type {
+  ProxyEvent,
+  Route,
+  Response as ProxyResponse,
+} from "../types/index.js";
+import { determineTargetUrl } from "./routing.js";
+import { shortId } from "../utils/hash.js";
+import { OpenAPIRecorder } from "../services/OpenAPIRecorder.js";
 
 /**
  * IncomingMessage properties:
@@ -26,18 +32,41 @@ import { OpenAPIRecorder } from '../services/OpenAPIRecorder.js';
  * - aborted: Whether request was aborted by client
  */
 
+interface ResponseData {
+  headers: Record<string, string>;
+  status: number;
+  body: unknown;
+  targetUrl: string;
+}
+
+interface ExtendedRequest extends IncomingMessage {
+  isServerName?: boolean;
+  target?: string;
+  route?: Route;
+  resolvedPath?: string;
+  cachedResponse?: ProxyResponse;
+  startTime?: number;
+  body?: unknown;
+  originalUrl?: string;
+  method?: string;
+}
+
+interface ExtendedServerResponse extends ServerResponse {
+  responseBody?: unknown;
+}
+
 const isDomainLike = (str: string): boolean => {
   // Simple check for domain-like strings (contains at least one dot)
   return /^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+$/.test(str);
 };
 
 const getHostnameFromRequest = (req: IncomingMessage): string => {
-  const urlPath = (req as Request).originalUrl || req.url || '/';
-  const [firstPart] = urlPath.split('/').filter(Boolean);
-  
-  if ((req as any).isServerName || !isDomainLike(firstPart)) {
+  const urlPath = (req as Request).originalUrl || req.url || "/";
+  const [firstPart] = urlPath.split("/").filter(Boolean);
+
+  if ((req as ExtendedRequest).isServerName || !isDomainLike(firstPart)) {
     // For server name paths or default server case, use hostname from target URL
-    return new URL((req as any).target).hostname;
+    return new URL((req as ExtendedRequest).target!).hostname;
   }
   // For domain-like paths, use the first part directly
   return firstPart;
@@ -48,22 +77,18 @@ const getHostnameFromRequest = (req: IncomingMessage): string => {
  */
 const createProxyEvent = async (
   req: IncomingMessage,
-  responseData: {
-    headers: Record<string, string>;
-    status: number;
-    body: any;
-    targetUrl: string;
-  },
+  responseData: ResponseData,
   startTime: number
 ): Promise<ProxyEvent> => {
-  const urlPath = (req as Request).originalUrl || req.url || '/';
+  const urlPath = (req as Request).originalUrl || req.url || "/";
   const hostname = getHostnameFromRequest(req);
-  const method = (req as Request).method || 'GET';
-  const route = (req as any).route;
+  const method = (req as Request).method || "GET";
+  const route = (req as ExtendedRequest).route;
 
-  const path = (req as any).isServerName || isDomainLike(urlPath.split('/')[1])
-    ? '/' + urlPath.split('/').slice(2).join('/')
-    : urlPath;
+  const path =
+    (req as ExtendedRequest).isServerName || isDomainLike(urlPath.split("/")[1])
+      ? "/" + urlPath.split("/").slice(2).join("/")
+      : urlPath;
 
   return {
     id: shortId(urlPath, startTime),
@@ -73,7 +98,7 @@ const createProxyEvent = async (
     path,
     targetUrl: responseData.targetUrl,
     requestHeaders: req.headers as Record<string, string>,
-    requestBody: (req as any).body,
+    requestBody: (req as ExtendedRequest).body,
     responseHeaders: responseData.headers,
     responseStatus: responseData.status,
     responseBody: responseData.body,
@@ -84,44 +109,57 @@ const createProxyEvent = async (
 
 const openAPIRecorder = new OpenAPIRecorder();
 
-export function createProxyHandler(wsManager: WebSocketManager): RequestHandler {
+export function createProxyHandler(
+  wsManager: WebSocketManager
+): RequestHandler {
   return createProxyMiddleware({
     // Determines target URL for each request
     // Lifecycle: Called first when request is received
     router: async (req: IncomingMessage) => {
-      const urlPath = (req as Request).originalUrl || req.url || '/';
-      const method = (req as Request).method || 'GET';
+      const method = (req as Request).method || "GET";
 
       // Use determineTargetUrl to get targetUrl, hostname, and isServerName
-      const { targetUrl, hostname, isServerName, resolvedPath } = await determineTargetUrl(req);
+      const { targetUrl, hostname, resolvedPath } = await determineTargetUrl(
+        req
+      );
 
       if (!hostname) {
-        throw new Error('No valid target URL found. Please check server configurations.');
+        throw new Error(
+          "No valid target URL found. Please check server configurations."
+        );
       }
 
       // Store information for pathRewrite
-      (req as any).resolvedPath = resolvedPath;
-      
+      (req as ExtendedRequest).resolvedPath = resolvedPath;
+
       // Get or create route for tracking
-      const route = await storage.getRouteByUrlMethod(resolvedPath, method) || 
-                   await storage.createRouteFromRequest({ method, path: resolvedPath, hostname });
-      (req as any).route = route;
-      
+      const route =
+        (await storage.getRouteByUrlMethod(resolvedPath, method)) ||
+        (await storage.createRouteFromRequest({
+          method,
+          path: resolvedPath,
+          hostname,
+        }));
+      (req as ExtendedRequest).route = route;
+
       const lockedResponse = await storage.findLockedResponse(route);
       if (route.isLocked || lockedResponse) {
         // Attach the cached response to the request for later use
-        (req as any).cachedResponse = lockedResponse || await storage.findRandomResponse(route);
+        (req as ExtendedRequest).cachedResponse =
+          lockedResponse ||
+          (await storage.findRandomResponse(route)) ||
+          undefined;
       }
 
       // Store the target URL for later use
-      (req as any).target = targetUrl;
+      (req as ExtendedRequest).target = targetUrl;
       return targetUrl;
     },
 
     // Use resolvedPath from the router()
     // Lifecycle: Called after router, before request is proxied
     pathRewrite: (_path, req) => {
-      return (req as any).resolvedPath;
+      return (req as ExtendedRequest).resolvedPath;
     },
 
     // Changes the origin of the host header to the target URL
@@ -131,34 +169,39 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
       // Called just before the request is sent to the target
       // Lifecycle: After path rewrite, before sending to target
       proxyReq: async (proxyReq, req: IncomingMessage, res: ServerResponse) => {
-        const cachedResponse = (req as any).cachedResponse;
-        
+        const cachedResponse = (req as ExtendedRequest).cachedResponse;
+
         if (!cachedResponse) {
-          (req as any).startTime = Date.now();
+          (req as ExtendedRequest).startTime = Date.now();
           return; // continue to target
         }
 
         proxyReq.destroy(); // cancel request to target
         const body = cachedResponse.lockedBody || cachedResponse.body;
-        console.log('Picked response', cachedResponse.body);
+        console.log("Picked response", cachedResponse.body);
 
         // Send back cached response
-        const response = typeof body === 'string' ? body : JSON.stringify(body);
-        const headers = {...cachedResponse.headers};
-        // update content-length to match responseBody length
-        headers['content-length'] = Buffer.byteLength(response).toString();
-        res.writeHead(cachedResponse.status, headers);
+        const response = typeof body === "string" ? body : JSON.stringify(body);
+        const headers = { ...(cachedResponse.headers || {}) };
+        headers["content-length"] = Buffer.byteLength(response).toString();
+        res.writeHead(cachedResponse.status || 200, headers);
         res.end(response);
 
         // Broadcast the cached response hit
-        const route = (req as any).route;
-        const proxyEvent = await createProxyEvent(req, {
-          headers: cachedResponse.headers,
-          status: cachedResponse.status,
-          body: cachedResponse.body,
-          targetUrl: 'cache'
-        }, Date.now());
-        
+        const route = (req as ExtendedRequest).route;
+        if (!route) return true; // Early return if no route
+
+        const proxyEvent = await createProxyEvent(
+          req,
+          {
+            headers: cachedResponse.headers || {},
+            status: cachedResponse.status || 200,
+            body: cachedResponse.body,
+            targetUrl: "cache",
+          },
+          Date.now()
+        );
+
         route.hits++;
         await storage.saveRoute(route);
 
@@ -169,13 +212,17 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
 
       // Called when response is received from target
       // Lifecycle: After target responds, before sending back to client
-      proxyRes: (proxyRes: IncomingMessage, req: IncomingMessage, res: ServerResponse) => {
-        const startTime = (req as any).startTime;
-        const route = (req as any).route;
+      proxyRes: (
+        proxyRes: IncomingMessage,
+        req: IncomingMessage,
+        res: ServerResponse
+      ) => {
+        const startTime = (req as ExtendedRequest).startTime;
+        const route = (req as ExtendedRequest).route;
 
-        let body = '';
-        proxyRes.on('data', chunk => body += chunk);
-        proxyRes.on('end', async () => {
+        let body = "";
+        proxyRes.on("data", (chunk) => (body += chunk));
+        proxyRes.on("end", async () => {
           let parsedBody;
           try {
             parsedBody = JSON.parse(body);
@@ -184,19 +231,29 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
           }
 
           // Store response body for OpenAPI recording
-          (res as any).responseBody = parsedBody;
+          (res as ExtendedServerResponse).responseBody = parsedBody;
           // Record the request/response pair
-          openAPIRecorder.recordRequest(req as Request, res as unknown as Response, startTime);
+          openAPIRecorder.recordRequest(
+            req as Request,
+            res as unknown as Response,
+            startTime || Date.now()
+          );
 
-          const proxyEvent = await createProxyEvent(req, {
-            headers: proxyRes.headers as Record<string, string>,
-            status: proxyRes.statusCode!,
-            body: parsedBody,
-            targetUrl: (req as any).target
-          }, startTime);
+          const proxyEvent = await createProxyEvent(
+            req,
+            {
+              headers: proxyRes.headers as Record<string, string>,
+              status: proxyRes.statusCode!,
+              body: parsedBody,
+              targetUrl: (req as ExtendedRequest).target || "unknown",
+            },
+            startTime || Date.now()
+          );
 
           // Add OpenAPI spec to the event
           proxyEvent.openapi = openAPIRecorder.getSpec();
+
+          if (!route) return; // Early return if no route
 
           storage.addRouteResponse(route, proxyEvent);
           wsManager.broadcast(proxyEvent);
@@ -205,14 +262,20 @@ export function createProxyHandler(wsManager: WebSocketManager): RequestHandler 
 
       // Called when any error occurs during proxying
       // Lifecycle: Can occur at any point during the proxy process
-      error: (err: Error, req: IncomingMessage, res: ServerResponse | Socket) => {
-        console.error('Proxy error:', err);
+      error: (
+        err: Error,
+        req: IncomingMessage,
+        res: ServerResponse | Socket
+      ) => {
+        console.error("Proxy error:", err);
         if (res instanceof ServerResponse) {
           res.statusCode = 500;
-          res.end(JSON.stringify({ error: 'Proxy error', message: err.message }));
+          res.end(
+            JSON.stringify({ error: "Proxy error", message: err.message })
+          );
         }
       },
     },
-    logger: console
+    logger: console,
   });
 }

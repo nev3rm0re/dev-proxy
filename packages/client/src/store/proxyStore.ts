@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ProxyEvent, ProxyState } from "../types/proxy";
+import type { ProxyEvent, ProxyState } from "../types/proxy";
 
 export const useProxyStore = create<ProxyState>()((set, get) => ({
   events: [],

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useProxyStore } from "../store/proxyStore";
-import { ProxyEvent } from "../types/proxy";
+import type { ProxyEvent } from "../types/proxy";
 
 export const useWebSocket = (url: string) => {
     const wsRef = useRef<WebSocket | null>(null);

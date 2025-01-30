@@ -12,7 +12,9 @@
     "dev-proxy": "packages/server/dist/cli.js"
   },
   "workspaces": [
-    "packages/*"
+    "packages/server",
+    "packages/client",
+    "packages/types"
   ],
   "scripts": {
     "build": "turbo run build",
@@ -31,8 +33,13 @@
   "author": "German Rumm",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^8.57.0",
+    "@types/node": "^20.10.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "globals": "^15.14.0",
     "turbo": "latest",
-    "typescript": "^5.3.0",
-    "@types/node": "^20.10.0"
+    "typescript": "~5.5.0"
   }
 }

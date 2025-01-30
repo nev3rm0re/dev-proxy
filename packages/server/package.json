@@ -14,12 +14,13 @@
     "public"
   ],
   "bin": {
-    "dev-proxy": "./dist/cli.js"
+    "dev-proxy": "dist/cli.js"
   },
   "license": "MIT",
   "scripts": {
     "dev": "tsx watch src/cli.ts",
     "build": "tsc",
+    "postbuild": "chmod +x ./dist/cli.js",
     "verify-client": "test -d public && test \"$(ls -A public)\" && test -f public/index.html || (echo 'Error: public folder is empty or missing client files' && exit 1)",
     "prepare-publish": "yarn verify-client",
     "npm-publish": "yarn prepare-publish && node scripts/publish.js",
@@ -29,6 +30,7 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@4ev3rm0re/dev-proxy-types": "*",
     "commander": "^12.1.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",

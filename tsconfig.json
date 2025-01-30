@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "skipLibCheck": true
+  },
+  "references": [
+    { "path": "packages/types" },
+    { "path": "packages/server" },
+    { "path": "packages/client" }
+  ]
+} 

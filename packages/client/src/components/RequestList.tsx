@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ResponseList } from '@/components/ResponseList';
-import { ProxyEvent } from '@/types/proxy';
+import type { ProxyEvent } from '@/types/proxy';
 import { LockButton } from '@/components/ui/lock-button';
 import { cn } from "@/lib/utils";
 import { groupBy } from 'lodash';

@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { WebSocketManager } from '../websocket/index.js';
+import type { Request, Response, NextFunction } from 'express';
+import type { WebSocketManager } from '../websocket/index.js';
 import { createProxyHandler } from '../proxy/index.js';
 
 export function proxyMiddleware(wsManager: WebSocketManager) {

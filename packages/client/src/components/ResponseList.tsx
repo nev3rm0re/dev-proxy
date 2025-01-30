@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Edit } from 'lucide-react';
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ProxyEvent, ProxyResponse } from '@/types/proxy';
+import type { ProxyEvent, ProxyResponse } from '@/types/proxy';
 import { LockButton } from './ui/lock-button';
 
 interface ResponseListProps {
