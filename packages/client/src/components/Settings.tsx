@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X, Edit2, Check, XCircle } from 'lucide-react';
+import { X, Edit2, Check, XCircle, Star, StarOff, Info, ArrowLeft } from 'lucide-react';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { Link } from 'react-router-dom';
 
 interface Server {
     id: string;
@@ -8,17 +10,12 @@ interface Server {
     isDefault: boolean;
 }
 
-interface SettingsProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
-
 interface EditingServer extends Server {
     originalName: string;
     originalUrl: string;
 }
 
-export const Settings = ({ isOpen, onClose }: SettingsProps) => {
+export const Settings = () => {
     const [servers, setServers] = useState<Server[]>([]);
     const [newServer, setNewServer] = useState({ name: '', url: '' });
     const [editingServer, setEditingServer] = useState<EditingServer | null>(null);
@@ -124,65 +121,107 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
         }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-gray-800 rounded-lg p-6 w-[500px] relative">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold text-white">Settings</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white">
-                        <X size={24} />
-                    </button>
+        <div className="h-screen flex flex-col bg-gray-900">
+            {/* Header - similar to RequestList header */}
+            <div className="grid grid-cols-[200px_1fr_200px] p-3 border-b border-gray-800">
+                <div className="flex items-center">
+                    <Link 
+                        to="/"
+                        className="flex items-center gap-2 text-muted-foreground hover:text-white transition-colors"
+                    >
+                        <ArrowLeft size={16} />
+                        <span className="text-sm">Back</span>
+                    </Link>
                 </div>
+                <div className="flex items-center justify-center gap-2">
+                    <h2 className="text-lg font-medium text-white">Settings</h2>
+                    <Tooltip.Provider>
+                        <Tooltip.Root>
+                            <Tooltip.Trigger asChild>
+                                <button className="text-gray-400 hover:text-gray-300">
+                                    <Info size={16} />
+                                </button>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                                <Tooltip.Content 
+                                    className="bg-gray-800 text-white p-3 rounded-lg shadow-lg text-sm max-w-xs"
+                                    sideOffset={5}
+                                >
+                                    The default server will be used for URLs/paths that don't have a domain name as the first part of the URL
+                                    <Tooltip.Arrow className="fill-gray-800" />
+                                </Tooltip.Content>
+                            </Tooltip.Portal>
+                        </Tooltip.Root>
+                    </Tooltip.Provider>
+                </div>
+                <div /> {/* Empty div for grid alignment */}
+            </div>
 
-                <div className="mb-6">
-                    <h3 className="text-lg font-medium text-white mb-4">Servers</h3>
-                    
-                    <div className="space-y-4">
-                        {servers.map((server) => (
-                            <div key={server.id} className="flex items-center gap-4 bg-gray-700 p-3 rounded">
-                                {editingServer?.id === server.id ? (
-                                    <>
-                                        <div className="flex-1 space-y-2">
-                                            <input
-                                                type="text"
-                                                value={editingServer.name}
-                                                onChange={(e) => setEditingServer({
-                                                    ...editingServer,
-                                                    name: e.target.value
-                                                })}
-                                                className="w-full bg-gray-600 text-white px-2 py-1 rounded"
-                                            />
-                                            <input
-                                                type="text"
-                                                value={editingServer.url}
-                                                onChange={(e) => setEditingServer({
-                                                    ...editingServer,
-                                                    url: e.target.value
-                                                })}
-                                                className="w-full bg-gray-600 text-white px-2 py-1 rounded"
-                                            />
-                                        </div>
+            {/* Content */}
+            <div className="flex-1 overflow-auto">
+                <div className="p-4 space-y-2">
+                    {/* Server List */}
+                    {servers.map((server) => (
+                        <div 
+                            key={server.id} 
+                            className="flex items-center justify-between p-3 bg-gray-800 rounded hover:bg-gray-700"
+                        >
+                            {editingServer?.id === server.id ? (
+                                <>
+                                    <div className="flex-1 grid grid-cols-2 gap-4 mr-4">
+                                        <input
+                                            type="text"
+                                            value={editingServer.name}
+                                            onChange={(e) => setEditingServer({
+                                                ...editingServer,
+                                                name: e.target.value
+                                            })}
+                                            className="bg-gray-900 text-white px-3 py-1.5 rounded border border-gray-700 focus:outline-none focus:border-gray-500"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={editingServer.url}
+                                            onChange={(e) => setEditingServer({
+                                                ...editingServer,
+                                                url: e.target.value
+                                            })}
+                                            className="bg-gray-900 text-white px-3 py-1.5 rounded border border-gray-700 focus:outline-none focus:border-gray-500"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2">
                                         <button
                                             onClick={handleEditServer}
-                                            className="text-green-400 hover:text-green-300"
+                                            className="px-3 py-1.5 bg-green-600/20 text-green-400 rounded hover:bg-green-600/30"
                                         >
-                                            <Check size={16} />
+                                            Save
                                         </button>
                                         <button
                                             onClick={cancelEditing}
-                                            className="text-red-400 hover:text-red-300"
+                                            className="px-3 py-1.5 bg-red-600/20 text-red-400 rounded hover:bg-red-600/30"
                                         >
-                                            <XCircle size={16} />
+                                            Cancel
                                         </button>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="flex-1">
-                                            <div className="font-medium text-white">{server.name}</div>
-                                            <div className="text-sm text-gray-400">{server.url}</div>
-                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex-1 grid grid-cols-2 gap-4">
+                                        <div className="font-medium text-white">{server.name}</div>
+                                        <div className="text-gray-300">{server.url}</div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => handleSetDefault(server.id)}
+                                            className="text-gray-400 hover:text-yellow-400"
+                                            title={server.isDefault ? "Default server" : "Set as default"}
+                                        >
+                                            {server.isDefault ? (
+                                                <Star className="fill-yellow-400 text-yellow-400" size={18} />
+                                            ) : (
+                                                <StarOff size={18} />
+                                            )}
+                                        </button>
                                         <button
                                             onClick={() => startEditing(server)}
                                             className="text-blue-400 hover:text-blue-300"
@@ -190,46 +229,37 @@ export const Settings = ({ isOpen, onClose }: SettingsProps) => {
                                             <Edit2 size={16} />
                                         </button>
                                         <button
-                                            onClick={() => handleSetDefault(server.id)}
-                                            className={`px-2 py-1 rounded text-sm ${
-                                                server.isDefault
-                                                    ? 'bg-green-600 text-white'
-                                                    : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                                            }`}
-                                        >
-                                            {server.isDefault ? 'Default' : 'Set Default'}
-                                        </button>
-                                        <button
                                             onClick={() => handleDeleteServer(server.id)}
                                             className="text-gray-400 hover:text-red-400"
                                         >
                                             <X size={16} />
                                         </button>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ))}
 
-                    <div className="mt-4 space-y-3">
+                    {/* Add New Server Form */}
+                    <div className="flex gap-4 p-3 bg-gray-800 rounded mt-4">
                         <input
                             type="text"
                             placeholder="Server name"
                             value={newServer.name}
                             onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
-                            className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                            className="flex-1 bg-gray-900 text-white px-3 py-1.5 rounded border border-gray-700 focus:outline-none focus:border-gray-500"
                         />
                         <input
                             type="text"
                             placeholder="Server URL"
                             value={newServer.url}
                             onChange={(e) => setNewServer({ ...newServer, url: e.target.value })}
-                            className="w-full bg-gray-700 text-white px-3 py-2 rounded"
+                            className="flex-1 bg-gray-900 text-white px-3 py-1.5 rounded border border-gray-700 focus:outline-none focus:border-gray-500"
                         />
                         <button
                             onClick={handleAddServer}
                             disabled={!newServer.name || !newServer.url}
-                            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Add Server
                         </button>

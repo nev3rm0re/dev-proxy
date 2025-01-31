@@ -4,14 +4,12 @@ import { RequestList } from "./RequestList";
 import React, { useEffect, useState } from "react";
 import type { ProxyResponse } from "@/types/proxy";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
-import { Settings } from "./Settings";
-import { BuildHashBadge } from "./BuildHashBadge";
+import { Link } from "react-router-dom";
 
 export const Layout = () => {
     const wsUrl = `/ws`;
     const { isConnected } = useWebSocket(wsUrl);
     const { events, setEvents, incomingEventId, updateEvent, getEvent } = useProxyStore();
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [filterTerm, setFilterTerm] = useState('');
 
     useEffect(() => {
@@ -22,7 +20,7 @@ export const Layout = () => {
             setEvents(data);
         };
         fetchEvents();
-    }, []);
+    }, [setEvents]);
 
     const handleLockEvent = async (eventId: string) => {
         try {
@@ -142,12 +140,12 @@ export const Layout = () => {
                     />
                 </div>
                 <div className="flex items-center gap-4">
-                    <button
+                    <Link
+                        to={'/settings'}
                         className="text-muted-foreground hover:text-white transition-colors"
-                        onClick={() => setIsSettingsOpen(true)}
                     >
                         <SettingsIcon size={16} />
-                    </button>
+                    </Link>
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-muted-foreground">
                             {isConnected ? 'Connected' : 'Disconnected'}
@@ -165,8 +163,6 @@ export const Layout = () => {
                     onEditResponse={handleEditResponse}
                 />
             </div>
-            <Settings isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
-            <BuildHashBadge />
         </div>
     );
 };

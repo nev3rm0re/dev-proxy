@@ -1,11 +1,16 @@
-import { Layout } from './components/Layout'
+import { Routes, Route } from "react-router-dom";
+import { Layout } from "./components/Layout";
+import { Settings } from "./components/Settings";
+import { BuildHashBadge } from "./components/BuildHashBadge";
 
-function App() {
-  return (
-    <div className="min-h-screen bg-background text-foreground">
-      <Layout />
-    </div>
-  )
-}
-
-export default App
+export const App = () => {
+    return (
+        <div className="min-h-screen bg-background">
+            <Routes>
+                <Route path="/" element={<Layout />} />
+                <Route path="/settings" element={<Settings />} />
+            </Routes>
+            <BuildHashBadge />
+        </div>
+    );
+};

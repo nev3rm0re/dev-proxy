@@ -37,5 +37,3 @@ export interface Route {
   customResponse?: Response;
   hits: number;
 }
-
-// Add other shared types...

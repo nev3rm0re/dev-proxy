@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import type { Route } from "@4ev3rm0re/dev-proxy-types";
+import type { Route } from "../types/index.js";
 
 export interface ExtendedRequest extends Omit<Request, "route"> {
   isServerName?: boolean;

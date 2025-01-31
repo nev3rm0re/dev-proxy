@@ -89,6 +89,21 @@ const initialEvents = [
   },
 ];
 
+const exampleResponse = {
+  responseId: "resp_123",
+  status: 200,
+  headers: {
+    'content-type': 'application/json',
+    'content-length': '1024',
+    'date': '2024-03-20T12:00:00Z'
+  },
+  body: {
+    message: "Example response"
+  },
+  isLocked: false,
+  lockedBody: null // optional, only used when isLocked is true
+};
+
 export const Default = () => {
   const [events, setEvents] = useState(initialEvents);
   const [incomingEventId, setIncomingEventId] = useState(null);
@@ -103,7 +118,9 @@ export const Default = () => {
       hostname: "platform.example.eu",
       hits: 1,
       isLocked: false,
-      responses: [],
+      responses: [
+        exampleResponse,
+      ],
       timestamp: new Date().toISOString(),
     };
 
@@ -119,7 +136,7 @@ export const Default = () => {
         <div className="flex gap-2">
           <button
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            onClick={() => simulateNewRequest("GET", "/api/users/123")}
+            onClick={() => simulateNewRequest("GET", "/account/info")}
           >
             Simulate GET Request
           </button>
@@ -145,8 +162,8 @@ export const Default = () => {
               )
             );
           }}
-          onLockResponse={() => {}}
-          onEditResponse={() => {}}
+          onLockResponse={() => { }}
+          onEditResponse={() => { }}
         />
       </div>
     </div>

@@ -8,7 +8,6 @@ import {
 import { ResponseList } from "@/components/ResponseList";
 import type { ProxyEvent } from "@/types/proxy";
 import { LockButton } from "@/components/ui/lock-button";
-import { cn } from "@/lib/utils";
 import { groupBy } from "lodash";
 
 interface RequestListProps {
@@ -24,10 +23,16 @@ interface RequestListProps {
 }
 
 const PRIORITY_METHODS = ["post", "put", "get", "delete"];
+const sortByMethodPriority = (a: string, b: string) => {
+  const priorityA = PRIORITY_METHODS.indexOf(a.toLowerCase());
+  const priorityB = PRIORITY_METHODS.indexOf(b.toLowerCase());
+  if (priorityA === -1) return 1;
+  if (priorityB === -1) return -1;
+  return priorityA - priorityB;
+};
 
 export const RequestList: React.FC<RequestListProps> = ({
   events,
-  incomingEventId,
   onLockEvent,
   onLockResponse,
   onEditResponse,
@@ -35,8 +40,8 @@ export const RequestList: React.FC<RequestListProps> = ({
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
 
   useEffect(() => {
-    if (events.length > 0 && expandedPath === null) {
-      setExpandedPath(events[0].path);
+    if (events.length > 0) {
+      setExpandedPath((prevPath) => prevPath === null ? events[0].path : prevPath);
     }
   }, [events]);
 
@@ -65,6 +70,7 @@ export const RequestList: React.FC<RequestListProps> = ({
             0
           );
           const methodGroups = groupBy(pathRequests, "method");
+          const isAnyRequestLocked = pathRequests.some(req => req.isLocked);
 
           return (
             <Collapsible
@@ -95,93 +101,39 @@ export const RequestList: React.FC<RequestListProps> = ({
                       {pathRequests[0].hostname}
                       {path}
                     </div>
-                    <div className="flex gap-0.5">
-                      {Object.keys(methodGroups)
-                        .sort((a, b) => {
-                          const priorityA = PRIORITY_METHODS.indexOf(
-                            a.toLowerCase()
-                          );
-                          const priorityB = PRIORITY_METHODS.indexOf(
-                            b.toLowerCase()
-                          );
-                          if (priorityA === -1) return 1;
-                          if (priorityB === -1) return -1;
-                          return priorityA - priorityB;
-                        })
-                        .map((method) => (
-                          <span
-                            key={method}
-                            className={`text-xs leading-none font-mono px-1 py-[2px] rounded-[2px] bg-gray-800 ${getMethodColor(
-                              method
-                            )}`}
-                          >
-                            {method.toUpperCase()}
-                          </span>
-                        ))}
-                    </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-gray-400 text-sm">{totalHits}</span>
+                    <LockButton
+                      isLocked={isAnyRequestLocked}
+                      onClick={() => onLockEvent(pathRequests[0].id)}
+                    />
                   </div>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="ml-6 space-y-2 pb-2">
                   {Object.entries(methodGroups)
-                    .sort(([methodA], [methodB]) => {
-                      const priorityA = PRIORITY_METHODS.indexOf(
-                        methodA.toLowerCase()
+                    .sort(([methodA], [methodB]) => sortByMethodPriority(methodA, methodB))
+                    .map(([method, requests]) => {
+                      const allResponses = requests.flatMap(req => req.responses);
+
+                      return (
+                        <div key={method} className="p-2 rounded hover:bg-gray-800">
+                          <ResponseList
+                            route={requests[0]}
+                            responses={allResponses}
+                            method={method}
+                            onLockResponse={(responseId) =>
+                              onLockResponse(requests[0].id, responseId)
+                            }
+                            onEditResponse={(responseId, newBody) =>
+                              onEditResponse(requests[0].id, responseId, newBody)
+                            }
+                          />
+                        </div>
                       );
-                      const priorityB = PRIORITY_METHODS.indexOf(
-                        methodB.toLowerCase()
-                      );
-                      if (priorityA === -1) return 1;
-                      if (priorityB === -1) return -1;
-                      return priorityA - priorityB;
-                    })
-                    .map(([method, requests]) => (
-                      <div key={method}>
-                        {requests.map((request) => (
-                          <div
-                            key={request.id}
-                            className={cn(
-                              "p-2 rounded hover:bg-gray-800",
-                              request.path === incomingEventId &&
-                                "animate-pulse-gradient"
-                            )}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span
-                                className={`text-xs font-mono ${getMethodColor(
-                                  method
-                                )}`}
-                              >
-                                {method.toUpperCase()}
-                              </span>
-                              <div className="flex items-center gap-4">
-                                <span className="text-gray-400 text-sm">
-                                  {request.hits}
-                                </span>
-                                <LockButton
-                                  isLocked={request.isLocked}
-                                  onClick={() => onLockEvent(request.id)}
-                                />
-                              </div>
-                            </div>
-                            <ResponseList
-                              route={request}
-                              responses={request.responses}
-                              onLockResponse={(responseId) =>
-                                onLockResponse(request.id, responseId)
-                              }
-                              onEditResponse={(responseId, newBody) =>
-                                onEditResponse(request.id, responseId, newBody)
-                              }
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
+                    })}
                 </div>
               </CollapsibleContent>
             </Collapsible>
@@ -191,24 +143,3 @@ export const RequestList: React.FC<RequestListProps> = ({
     </div>
   );
 };
-
-function getMethodColor(method: string): string {
-  switch (method.toLowerCase()) {
-    case "get":
-      return "text-emerald-500";
-    case "delete":
-      return "text-red-500";
-    case "post":
-      return "text-amber-500";
-    case "put":
-      return "text-orange-500";
-    case "patch":
-      return "text-yellow-500";
-    case "options":
-      return "text-blue-400";
-    case "head":
-      return "text-blue-400";
-    default:
-      return "text-gray-400";
-  }
-}

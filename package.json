@@ -12,9 +12,9 @@
     "dev-proxy": "packages/server/dist/cli.js"
   },
   "workspaces": [
-    "packages/server",
+    "packages/types",
     "packages/client",
-    "packages/types"
+    "packages/server"
   ],
   "scripts": {
     "build": "turbo run build",
