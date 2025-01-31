@@ -6,7 +6,6 @@ export default {
   title: "Components/RequestList",
   component: RequestList,
   parameters: {
-    layout: "fullscreen",
     // Disable the global decorator for this story
     layout: {
       fullscreen: true,
@@ -119,7 +118,7 @@ export const Default = () => {
       hits: 1,
       isLocked: false,
       responses: [
-        exampleResponse,
+        { ...exampleResponse, responseId: crypto.randomUUID() },
       ],
       timestamp: new Date().toISOString(),
     };

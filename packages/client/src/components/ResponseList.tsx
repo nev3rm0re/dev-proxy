@@ -18,11 +18,15 @@ interface ResponseListProps {
 }
 
 export const ResponseList: React.FC<ResponseListProps> = ({ responses, method, onLockResponse, onEditResponse }) => {
-  const [expandedResponseId, setExpandedResponseId] = useState<string | null>(null);
+  const [expandedResponseIds, setExpandedResponseIds] = useState<string[]>([]);
   const [editingResponseId, setEditingResponseId] = useState<string | null>(null);
 
   const handleToggleExpand = (responseId: string) => {
-    setExpandedResponseId(expandedResponseId === responseId ? null : responseId);
+    setExpandedResponseIds(prev => 
+      prev.includes(responseId)
+        ? prev.filter(id => id !== responseId)
+        : [...prev, responseId]
+    );
   };
 
   const handleEditResponse = (responseId: string) => {
@@ -37,14 +41,14 @@ export const ResponseList: React.FC<ResponseListProps> = ({ responses, method, o
   return (
     <div className="border-l border-gray-700">
       {responses.map((response, index) => (
-        <Collapsible key={`response-${index}`}>
+        <Collapsible key={`response-${index}`} open={expandedResponseIds.includes(response.responseId)}>
           <CollapsibleTrigger asChild>
             <div 
               className="flex items-center justify-between p-2 bg-gray-800 rounded cursor-pointer hover:bg-gray-700"
               onClick={() => handleToggleExpand(response.responseId)}
             >
               <div className="flex items-center space-x-2">
-                {expandedResponseId === response.responseId ? 
+                {expandedResponseIds.includes(response.responseId) ? 
                   <ChevronDown size={16} className="text-gray-300 hover:text-white transition-colors" /> : 
                   <ChevronRight size={16} className="text-gray-300 hover:text-white transition-colors" />
                 }
