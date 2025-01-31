@@ -15,11 +15,17 @@ const preview = {
     layout: "fullscreen",
   },
   decorators: [
-    (Story) => (
-      <Layout>
-        <Story />
-      </Layout>
-    ),
+    (Story, context) => {
+      // Skip layout if the story explicitly disables it
+      if (context.parameters.layout?.decorator === false) {
+        return <Story />;
+      }
+      return (
+        <Layout>
+          <Story />
+        </Layout>
+      );
+    },
   ],
 };
 

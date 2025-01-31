@@ -54,87 +54,120 @@ export const RequestList: React.FC<RequestListProps> = ({
         </div>
         <div className="flex items-center h-full">Path</div>
         <div className="flex justify-between items-center h-full gap-4">
-          <span>Hits</span>
-          <span>Status</span>
+          <span>Total Hits</span>
         </div>
       </div>
 
       <div className="flex-1 overflow-auto">
         {Object.entries(groupedRequests).map(([path, pathRequests]) => {
+          const totalHits = pathRequests.reduce(
+            (sum, req) => sum + req.hits,
+            0
+          );
           const methodGroups = groupBy(pathRequests, "method");
 
           return (
-            <div key={path} className="mb-4 border-b border-gray-200">
-              <h3 className="font-medium text-gray-200">{path}</h3>
-              <div className="ml-4">
-                {Object.entries(methodGroups)
-                  .sort(([methodA], [methodB]) => {
-                    const priorityA = PRIORITY_METHODS.indexOf(
-                      methodA.toLowerCase()
-                    );
-                    const priorityB = PRIORITY_METHODS.indexOf(
-                      methodB.toLowerCase()
-                    );
-                    if (priorityA === -1) return 1;
-                    if (priorityB === -1) return -1;
-                    return priorityA - priorityB;
-                  })
-                  .map(([method, requests]) => (
-                    <div key={method} className="mb-2">
-                      <span
-                        className={`text-xs font-mono ${getMethodColor(
-                          method
-                        )}`}
-                      >
-                        {method.toUpperCase()}
-                      </span>
-                      {requests.map((request) => (
-                        <Collapsible
-                          key={request.id}
-                          open={expandedPath === request.path}
-                          className="relative"
-                        >
-                          <CollapsibleTrigger asChild>
-                            <div
-                              onClick={() => handleToggleExpand(request.path)}
-                              className={cn(
-                                "sticky top-0 z-10 self-start grid grid-cols-[auto_1fr_auto] p-3 border-b border-gray-800 cursor-pointer hover:bg-gray-800 bg-gray-900",
-                                request.path === incomingEventId &&
-                                  "animate-pulse-gradient"
-                              )}
-                            >
-                              <div className="text-gray-300 flex items-baseline w-6 mt-1">
-                                {expandedPath === request.path ? (
-                                  <ChevronDown
-                                    size={18}
-                                    className="text-gray-300 hover:text-white transition-colors"
-                                  />
-                                ) : (
-                                  <ChevronRight
-                                    size={18}
-                                    className="text-gray-300 hover:text-white transition-colors"
-                                  />
-                                )}
-                              </div>
-                              <div className="text-gray-300 truncate">
-                                {request.hostname}
-                                {request.path}
-                              </div>
-                              <div className="flex justify-between items-center gap-4">
+            <Collapsible
+              key={path}
+              open={expandedPath === path}
+              className="border-b border-gray-800"
+            >
+              <CollapsibleTrigger asChild>
+                <div
+                  onClick={() => handleToggleExpand(path)}
+                  className="grid grid-cols-[auto_1fr_auto] p-3 cursor-pointer hover:bg-gray-800"
+                >
+                  <div className="text-gray-300 flex items-baseline w-6 mt-1">
+                    {expandedPath === path ? (
+                      <ChevronDown
+                        size={18}
+                        className="text-gray-300 hover:text-white transition-colors"
+                      />
+                    ) : (
+                      <ChevronRight
+                        size={18}
+                        className="text-gray-300 hover:text-white transition-colors"
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <div className="text-gray-300 truncate">
+                      {pathRequests[0].hostname}
+                      {path}
+                    </div>
+                    <div className="flex gap-0.5">
+                      {Object.keys(methodGroups)
+                        .sort((a, b) => {
+                          const priorityA = PRIORITY_METHODS.indexOf(
+                            a.toLowerCase()
+                          );
+                          const priorityB = PRIORITY_METHODS.indexOf(
+                            b.toLowerCase()
+                          );
+                          if (priorityA === -1) return 1;
+                          if (priorityB === -1) return -1;
+                          return priorityA - priorityB;
+                        })
+                        .map((method) => (
+                          <span
+                            key={method}
+                            className={`text-xs leading-none font-mono px-1 py-[2px] rounded-[2px] bg-gray-800 ${getMethodColor(
+                              method
+                            )}`}
+                          >
+                            {method.toUpperCase()}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-gray-400 text-sm">{totalHits}</span>
+                  </div>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="ml-6 space-y-2 pb-2">
+                  {Object.entries(methodGroups)
+                    .sort(([methodA], [methodB]) => {
+                      const priorityA = PRIORITY_METHODS.indexOf(
+                        methodA.toLowerCase()
+                      );
+                      const priorityB = PRIORITY_METHODS.indexOf(
+                        methodB.toLowerCase()
+                      );
+                      if (priorityA === -1) return 1;
+                      if (priorityB === -1) return -1;
+                      return priorityA - priorityB;
+                    })
+                    .map(([method, requests]) => (
+                      <div key={method}>
+                        {requests.map((request) => (
+                          <div
+                            key={request.id}
+                            className={cn(
+                              "p-2 rounded hover:bg-gray-800",
+                              request.path === incomingEventId &&
+                                "animate-pulse-gradient"
+                            )}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span
+                                className={`text-xs font-mono ${getMethodColor(
+                                  method
+                                )}`}
+                              >
+                                {method.toUpperCase()}
+                              </span>
+                              <div className="flex items-center gap-4">
                                 <span className="text-gray-400 text-sm">
                                   {request.hits}
                                 </span>
                                 <LockButton
                                   isLocked={request.isLocked}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onLockEvent(request.id);
-                                  }}
+                                  onClick={() => onLockEvent(request.id)}
                                 />
                               </div>
                             </div>
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
                             <ResponseList
                               route={request}
                               responses={request.responses}
@@ -145,13 +178,13 @@ export const RequestList: React.FC<RequestListProps> = ({
                                 onEditResponse(request.id, responseId, newBody)
                               }
                             />
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ))}
-                    </div>
-                  ))}
-              </div>
-            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </div>
@@ -161,15 +194,21 @@ export const RequestList: React.FC<RequestListProps> = ({
 
 function getMethodColor(method: string): string {
   switch (method.toLowerCase()) {
-    case "post":
-      return "text-green-500";
-    case "put":
-      return "text-blue-500";
     case "get":
-      return "text-yellow-500";
+      return "text-emerald-500";
     case "delete":
       return "text-red-500";
+    case "post":
+      return "text-amber-500";
+    case "put":
+      return "text-orange-500";
+    case "patch":
+      return "text-yellow-500";
+    case "options":
+      return "text-blue-400";
+    case "head":
+      return "text-blue-400";
     default:
-      return "text-gray-500";
+      return "text-gray-400";
   }
 }
