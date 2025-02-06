@@ -15,6 +15,8 @@ import type {
 import { determineTargetUrl } from "./routing.js";
 import { shortId } from "../utils/hash.js";
 import { OpenAPIRecorder } from "../services/OpenAPIRecorder.js";
+import { createGunzip } from "zlib";
+import { Readable } from "stream";
 
 /**
  * IncomingMessage properties:
@@ -221,8 +223,24 @@ export function createProxyHandler(
         const route = (req as ExtendedRequest).route;
 
         let body = "";
-        proxyRes.on("data", (chunk) => (body += chunk));
-        proxyRes.on("end", async () => {
+        const contentEncoding = proxyRes.headers["content-encoding"];
+
+        // Handle gzipped response
+        if (contentEncoding === "gzip") {
+          const gunzip = createGunzip();
+          const responseStream = Readable.from(proxyRes);
+
+          responseStream.pipe(gunzip);
+          gunzip.on("data", (chunk) => (body += chunk));
+          gunzip.on("end", async () => handleResponseEnd());
+          gunzip.on("error", (err) => console.error("Gunzip error:", err));
+        } else {
+          // Handle non-gzipped response as before
+          proxyRes.on("data", (chunk) => (body += chunk));
+          proxyRes.on("end", async () => handleResponseEnd());
+        }
+
+        async function handleResponseEnd() {
           let parsedBody;
           try {
             parsedBody = JSON.parse(body);
@@ -257,7 +275,7 @@ export function createProxyHandler(
 
           storage.addRouteResponse(route, proxyEvent);
           wsManager.broadcast(proxyEvent);
-        });
+        }
       },
 
       // Called when any error occurs during proxying
