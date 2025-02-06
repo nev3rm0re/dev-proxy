@@ -4,18 +4,17 @@
 - [x] Edit locked route's response body
 - [x] Add "Server settings"
     - [x] Allow to work on `/` path - Set default "project"
-    - [ ] Write unit test for this functionality
+    - [x] Write unit test for this functionality
 - [x] Clear session
 - [ ] Allow "replaying" requests
 - [ ] Preserve log should be optional
-- [ ] Add search/filter functionality
+- [x] Add search/filter functionality
 - [ ] Add responses manually with differentiation between manually created and proxied
 - [ ] Allow adding/copying responses
 - [ ] Add routes manually
     - [ ] Add "wildcard" routes
-- [ ] Import routes from Swagger
+- [ ] Export/import config/settings, from/to Swagger
 - [ ] Edit response headers and other details
 - [ ] More types of events: req start, res received, loading indicator
 - [ ] Simulate latency
 - [ ] API Docs?
-- [ ] Export/import config/settings
