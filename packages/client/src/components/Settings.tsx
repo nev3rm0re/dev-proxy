@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Edit2, Check, XCircle, Star, StarOff, Info, ArrowLeft } from 'lucide-react';
+import { X, Edit2, Star, StarOff, Info, ArrowLeft } from 'lucide-react';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Link } from 'react-router-dom';
 
