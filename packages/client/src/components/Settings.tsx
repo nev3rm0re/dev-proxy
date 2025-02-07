@@ -130,7 +130,6 @@ export const Settings = () => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-900">
-      {/* Header - similar to RequestList header */}
       <div className="grid grid-cols-[200px_1fr_200px] p-3 border-b border-gray-800">
         <div className="flex items-center">
           <Link
