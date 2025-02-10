@@ -41,6 +41,9 @@ interface ResponseData {
   targetUrl: string;
 }
 
+/**
+ * Extension of the IncomingMessage interface
+ */
 interface ExtendedRequest extends IncomingMessage {
   isServerName?: boolean;
   target?: string;
@@ -62,17 +65,19 @@ const isDomainLike = (str: string): boolean => {
   return /^[a-zA-Z0-9][a-zA-Z0-9-]*(\.[a-zA-Z0-9-]+)+$/.test(str);
 };
 
-const getHostnameFromRequest = (req: IncomingMessage): string => {
+const getHostnameFromRequest = (req: ProxyExtendedRequest): string => {
   const urlPath = (req as Request).originalUrl || req.url || "/";
   const [firstPart] = urlPath.split("/").filter(Boolean);
 
-  if ((req as ExtendedRequest).isServerName || !isDomainLike(firstPart)) {
+  if (req.isServerName || !isDomainLike(firstPart)) {
     // For server name paths or default server case, use hostname from target URL
-    return new URL((req as ExtendedRequest).target!).hostname;
+    return new URL(req.target!).hostname;
   }
   // For domain-like paths, use the first part directly
   return firstPart;
 };
+
+type ProxyExtendedRequest = IncomingMessage & ExtendedRequest;
 
 /**
  * Create ProxyEvent from request and response data
@@ -82,9 +87,9 @@ const createProxyEvent = async (
   responseData: ResponseData,
   startTime: number
 ): Promise<ProxyEvent> => {
-  const urlPath = (req as Request).originalUrl || req.url || "/";
+  const urlPath = req.url || "/";
   const hostname = getHostnameFromRequest(req);
-  const method = (req as Request).method || "GET";
+  const method = req.method || "GET";
   const route = (req as ExtendedRequest).route;
 
   const path =
@@ -105,11 +110,45 @@ const createProxyEvent = async (
     responseStatus: responseData.status,
     responseBody: responseData.body,
     duration: Date.now() - startTime,
+    responses: route?.responses,
     ...route,
   };
 };
 
 const openAPIRecorder = new OpenAPIRecorder();
+
+const broadcastCachedResponse = async (
+  wsManager: WebSocketManager,
+  cachedResponse: ProxyResponse
+) => {
+  const proxyEvent = await createProxyEvent(
+    req,
+    {
+      headers: cachedResponse.headers || {},
+      status: cachedResponse.status,
+      body: cachedResponse.body,
+      targetUrl: "cache",
+    },
+    Date.now()
+  );
+  wsManager.broadcast(proxyEvent);
+};
+const writeCachedResponse = (
+  res: ServerResponse,
+  cachedResponse: ProxyResponse
+) => {
+  // Get cached response body
+  const body = cachedResponse.lockedBody || cachedResponse.body;
+  // Convert body to string if it's not already
+  const response = typeof body === "string" ? body : JSON.stringify(body);
+  // Copy cached response headers
+  const headers = { ...(cachedResponse.headers || {}) };
+  // Update content-length header
+  headers["content-length"] = Buffer.byteLength(response).toString();
+  // Write response to client with original status
+  res.writeHead(cachedResponse.status || 200, headers);
+  res.end(response);
+};
 
 export function createProxyHandler(
   wsManager: WebSocketManager
@@ -126,6 +165,7 @@ export function createProxyHandler(
       );
 
       if (!hostname) {
+        console.log("No hostname for url: ", req.url);
         throw new Error(
           "No valid target URL found. Please check server configurations."
         );
@@ -171,23 +211,18 @@ export function createProxyHandler(
       // Called just before the request is sent to the target
       // Lifecycle: After path rewrite, before sending to target
       proxyReq: async (proxyReq, req: IncomingMessage, res: ServerResponse) => {
+        // has cached response?
         const cachedResponse = (req as ExtendedRequest).cachedResponse;
 
         if (!cachedResponse) {
+          // If not, start timer
           (req as ExtendedRequest).startTime = Date.now();
-          return; // continue to target
+          return; // ... and proceed with request to target
         }
 
         proxyReq.destroy(); // cancel request to target
-        const body = cachedResponse.lockedBody || cachedResponse.body;
-        console.log("Picked response", cachedResponse.body);
-
-        // Send back cached response
-        const response = typeof body === "string" ? body : JSON.stringify(body);
-        const headers = { ...(cachedResponse.headers || {}) };
-        headers["content-length"] = Buffer.byteLength(response).toString();
-        res.writeHead(cachedResponse.status || 200, headers);
-        res.end(response);
+        writeCachedResponse(res, cachedResponse);
+        broadcastCachedResponse(wsManager, cachedResponse);
 
         // Broadcast the cached response hit
         const route = (req as ExtendedRequest).route;

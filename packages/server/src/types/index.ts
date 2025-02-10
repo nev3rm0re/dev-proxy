@@ -33,6 +33,7 @@ export interface ProxyConfig {
  */
 export interface ProxyEvent {
   id: string;
+  hostname: string;
   timestamp: number; // timestamp of the request
   method: string; // http method
   path: string; // path of the request

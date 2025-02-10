@@ -16,8 +16,8 @@ import type { ServerOptions } from "./types/server.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const DEFAULT_PROXY_PORT = 3000;
-const DEFAULT_ADMIN_PORT = 3001;
+export const DEFAULT_ADMIN_PORT = 9000;
+export const DEFAULT_PROXY_PORT = 9001;
 
 async function findAvailablePort(startPort: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -30,6 +30,7 @@ async function findAvailablePort(startPort: number): Promise<number> {
 
     server.on("error", (err: NodeJS.ErrnoException) => {
       if (err.code === "EADDRINUSE") {
+        console.log(`Port ${startPort} in use, trying next port`);
         // Try the next port pair (increment by 10)
         resolve(findAvailablePort(startPort + 10));
       } else {
