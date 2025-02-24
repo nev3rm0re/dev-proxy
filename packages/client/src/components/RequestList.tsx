@@ -6,12 +6,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ResponseList } from "@/components/ResponseList";
-import type { ProxyEvent } from "@/types/proxy";
+import type { EventResponseSent } from "@/types/proxy";
 import { LockButton } from "@/components/ui/lock-button";
 import { groupBy } from "lodash";
 
 interface RequestListProps {
-  events: ProxyEvent[];
+  events: EventResponseSent[];
   incomingEventId?: string | null;
   onLockEvent: (eventId: string) => void;
   onLockResponse: (eventId: string, responseId: string) => void;
@@ -41,7 +41,9 @@ export const RequestList: React.FC<RequestListProps> = ({
 
   useEffect(() => {
     if (events.length > 0) {
-      setExpandedPath((prevPath) => prevPath === null ? events[0].path : prevPath);
+      setExpandedPath((prevPath) =>
+        prevPath === null ? events[0].path : prevPath
+      );
     }
   }, [events]);
 
@@ -70,7 +72,7 @@ export const RequestList: React.FC<RequestListProps> = ({
             0
           );
           const methodGroups = groupBy(pathRequests, "method");
-          const isAnyRequestLocked = pathRequests.some(req => req.isLocked);
+          const isAnyRequestLocked = pathRequests.some((req) => req.isLocked);
 
           return (
             <Collapsible
@@ -114,12 +116,19 @@ export const RequestList: React.FC<RequestListProps> = ({
               <CollapsibleContent>
                 <div className="ml-6 space-y-2 pb-2">
                   {Object.entries(methodGroups)
-                    .sort(([methodA], [methodB]) => sortByMethodPriority(methodA, methodB))
+                    .sort(([methodA], [methodB]) =>
+                      sortByMethodPriority(methodA, methodB)
+                    )
                     .map(([method, requests]) => {
-                      const allResponses = requests.flatMap(req => req.responses);
+                      const allResponses = requests.flatMap(
+                        (req) => req.responses
+                      );
 
                       return (
-                        <div key={method} className="p-2 rounded hover:bg-gray-800">
+                        <div
+                          key={method}
+                          className="p-2 rounded hover:bg-gray-800"
+                        >
                           <ResponseList
                             route={requests[0]}
                             responses={allResponses}
@@ -128,7 +137,11 @@ export const RequestList: React.FC<RequestListProps> = ({
                               onLockResponse(requests[0].id, responseId)
                             }
                             onEditResponse={(responseId, newBody) =>
-                              onEditResponse(requests[0].id, responseId, newBody)
+                              onEditResponse(
+                                requests[0].id,
+                                responseId,
+                                newBody
+                              )
                             }
                           />
                         </div>

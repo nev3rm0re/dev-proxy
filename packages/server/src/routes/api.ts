@@ -169,4 +169,32 @@ router.delete("/history", async (req, res) => {
   res.json({ success: true });
 });
 
+router.get("/rules", async (req, res) => {
+  try {
+    const history = await storage.getRoutes();
+    const rules = Object.values(history)
+      .filter((route) => route.isLocked)
+      .map((route) => {
+        // Find the locked response (if any)
+        const lockedResponse = route.responses.find((r) => r.isLocked);
+
+        return {
+          id: route.id,
+          method: route.method,
+          url: route.path,
+          responseStatus: lockedResponse?.status || 200,
+          responseBody:
+            lockedResponse?.lockedBody || lockedResponse?.body || "",
+          requestHeaders: route.requestHeaders,
+          responseHeaders: lockedResponse?.headers || {},
+        };
+      });
+
+    res.json(rules);
+  } catch (err) {
+    console.error("Failed to fetch rules:", err);
+    res.status(500).json({ error: "Failed to fetch rules" });
+  }
+});
+
 export default router;

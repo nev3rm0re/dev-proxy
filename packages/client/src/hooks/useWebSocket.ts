@@ -1,75 +1,81 @@
 import { useEffect, useRef } from "react";
 import { useProxyStore } from "../store/proxyStore";
-import type { ProxyEvent } from "../types/proxy";
+import type { EventResponseSent } from "../types/proxy";
 
 export const useWebSocket = (url: string) => {
-    const wsRef = useRef<WebSocket | null>(null);
-    const mountedRef = useRef<boolean>(true);
-    const { addEvent, setConnected, isConnected } = useProxyStore();
+  const wsRef = useRef<WebSocket | null>(null);
+  const mountedRef = useRef<boolean>(true);
+  const { addEvent, setConnected, isConnected } = useProxyStore();
 
-    useEffect(() => {
-        mountedRef.current = true;
+  useEffect(() => {
+    mountedRef.current = true;
 
-        const connect = () => {
-            if (!mountedRef.current || wsRef.current?.readyState === WebSocket.CONNECTING) return;
+    const connect = () => {
+      if (
+        !mountedRef.current ||
+        wsRef.current?.readyState === WebSocket.CONNECTING
+      )
+        return;
 
-            if (wsRef.current) {
-                wsRef.current.close();
-                wsRef.current = null;
-            }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
 
-            console.log(`Connecting to WebSocket at ${url}`);
-            const ws = new WebSocket(url);
+      console.log(`Connecting to WebSocket at ${url}`);
+      const ws = new WebSocket(url);
 
-            ws.onopen = () => {
-                console.log("WebSocket connected to proxy server");
-                setConnected(true);
-            };
+      ws.onopen = () => {
+        console.log("WebSocket connected to proxy server");
+        setConnected(true);
+      };
 
-            ws.onmessage = (event) => {
-                try {
-                    const proxyEvent: ProxyEvent = JSON.parse(event.data);
-                    console.log('Received event:', proxyEvent);
-                    addEvent(proxyEvent);
-                } catch (error) {
-                    console.error("Error parsing WebSocket message:", error);
-                }
-            };
+      ws.onmessage = (event) => {
+        try {
+          const proxyEvent: EventResponseSent = JSON.parse(event.data);
+          console.log("Received event:", proxyEvent);
+          addEvent(proxyEvent);
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
+        }
+      };
 
-            ws.onclose = () => {
-                if (isConnected) {
-                    console.log("WebSocket disconnected from proxy server, reconnecting...");
-                    setConnected(false);
-                }
-                if (mountedRef.current) {
-                    setTimeout(connect, 2000);
-                }
-            };
+      ws.onclose = () => {
+        if (isConnected) {
+          console.log(
+            "WebSocket disconnected from proxy server, reconnecting..."
+          );
+          setConnected(false);
+        }
+        if (mountedRef.current) {
+          setTimeout(connect, 2000);
+        }
+      };
 
-            ws.onerror = (error) => {
-                console.error("WebSocket error:", error);
-                if (ws.readyState === WebSocket.OPEN) {
-                    console.log("Closing open WebSocket on error")
-                    ws.close();
-                }
-            };
+      ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        if (ws.readyState === WebSocket.OPEN) {
+          console.log("Closing open WebSocket on error");
+          ws.close();
+        }
+      };
 
-            wsRef.current = ws;
-        };
-
-        connect();
-
-        return () => {
-            mountedRef.current = false;
-            // Close socket only if it's open
-            if (wsRef.current?.readyState === WebSocket.OPEN) {
-                wsRef.current?.close();
-            }
-        };
-    }, [url]);
-
-    return {
-        ws: wsRef.current,
-        isConnected
+      wsRef.current = ws;
     };
+
+    connect();
+
+    return () => {
+      mountedRef.current = false;
+      // Close socket only if it's open
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current?.close();
+      }
+    };
+  }, [url]);
+
+  return {
+    ws: wsRef.current,
+    isConnected,
+  };
 };

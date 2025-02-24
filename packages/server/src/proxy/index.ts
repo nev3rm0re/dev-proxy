@@ -119,7 +119,8 @@ const openAPIRecorder = new OpenAPIRecorder();
 
 const broadcastCachedResponse = async (
   wsManager: WebSocketManager,
-  cachedResponse: ProxyResponse
+  cachedResponse: ProxyResponse,
+  req: IncomingMessage
 ) => {
   const proxyEvent = await createProxyEvent(
     req,
@@ -222,7 +223,7 @@ export function createProxyHandler(
 
         proxyReq.destroy(); // cancel request to target
         writeCachedResponse(res, cachedResponse);
-        broadcastCachedResponse(wsManager, cachedResponse);
+        broadcastCachedResponse(wsManager, cachedResponse, req);
 
         // Broadcast the cached response hit
         const route = (req as ExtendedRequest).route;
