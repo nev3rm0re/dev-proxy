@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Edit } from "lucide-react";
+import { ChevronDown, ChevronRight, Edit, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -19,6 +19,7 @@ interface ResponseListProps {
   method: string;
   onLockResponse: (responseId: string) => void;
   onEditResponse: (responseId: string, newBody: string) => void;
+  onCreateRule: (responseId: string) => void;
 }
 
 export const ResponseList: React.FC<ResponseListProps> = ({
@@ -26,6 +27,7 @@ export const ResponseList: React.FC<ResponseListProps> = ({
   method,
   onLockResponse,
   onEditResponse,
+  onCreateRule,
 }) => {
   const [expandedResponseIds, setExpandedResponseIds] = useState<string[]>([]);
   const [editingResponseId, setEditingResponseId] = useState<string | null>(
@@ -108,6 +110,17 @@ export const ResponseList: React.FC<ResponseListProps> = ({
                     timeStyle: "short",
                   })}
                 </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateRule(response.responseId);
+                  }}
+                  className="text-blue-400 hover:text-blue-300"
+                >
+                  <Plus size={16} />
+                </Button>
                 <LockButton
                   isLocked={response.isLocked ?? false}
                   onClick={(e) => {
@@ -124,29 +137,33 @@ export const ResponseList: React.FC<ResponseListProps> = ({
                 <>
                   {editingResponseId === response.responseId ? (
                     <div>
-                      <CodeMirror
-                        value={JSON.stringify(
-                          response.lockedBody ?? response.body,
-                          null,
-                          2
-                        )}
-                        height="auto"
-                        extensions={[
-                          vim(),
-                          json(),
-                          basicSetup({
-                            lineNumbers: false,
-                            foldGutter: false,
-                          }),
-                        ]}
-                        theme="dark"
-                        onChange={(value) => {
-                          (
-                            document.querySelector(".cm-editor") as HTMLElement
-                          ).setAttribute("data-value", value);
-                        }}
-                        className="rounded border border-gray-700"
-                      />
+                      <div className="max-h-[calc(100vh-150px)] overflow-auto">
+                        <CodeMirror
+                          value={JSON.stringify(
+                            response.lockedBody ?? response.body,
+                            null,
+                            2
+                          )}
+                          height="auto"
+                          extensions={[
+                            vim(),
+                            json(),
+                            basicSetup({
+                              lineNumbers: false,
+                              foldGutter: false,
+                            }),
+                          ]}
+                          theme="dark"
+                          onChange={(value) => {
+                            (
+                              document.querySelector(
+                                ".cm-editor"
+                              ) as HTMLElement
+                            ).setAttribute("data-value", value);
+                          }}
+                          className="rounded border border-gray-700"
+                        />
+                      </div>
                       <Button
                         onClick={() =>
                           handleSaveEdit(
@@ -165,23 +182,25 @@ export const ResponseList: React.FC<ResponseListProps> = ({
                     </div>
                   ) : (
                     <div>
-                      <CodeMirror
-                        value={JSON.stringify(
-                          response.lockedBody ?? response.body,
-                          null,
-                          2
-                        )}
-                        height="auto"
-                        extensions={[
-                          json(),
-                          basicSetup({
-                            lineNumbers: false,
-                            foldGutter: false,
-                          }),
-                        ]}
-                        theme="dark"
-                        className="rounded border border-gray-700"
-                      />
+                      <div className="max-h-[calc(100vh-150px)] overflow-auto">
+                        <CodeMirror
+                          value={JSON.stringify(
+                            response.lockedBody ?? response.body,
+                            null,
+                            2
+                          )}
+                          height="auto"
+                          extensions={[
+                            json(),
+                            basicSetup({
+                              lineNumbers: false,
+                              foldGutter: false,
+                            }),
+                          ]}
+                          theme="dark"
+                          className="rounded border border-gray-700"
+                        />
+                      </div>
                       <Button
                         onClick={() => handleEditResponse(response.responseId)}
                         className="mt-2"
@@ -193,20 +212,22 @@ export const ResponseList: React.FC<ResponseListProps> = ({
                   )}
                 </>
               ) : (
-                <CodeMirror
-                  value={JSON.stringify(response.body, null, 2)}
-                  height="auto"
-                  editable={false}
-                  extensions={[
-                    json(),
-                    basicSetup({
-                      lineNumbers: false,
-                      foldGutter: false,
-                    }),
-                  ]}
-                  theme="dark"
-                  className="rounded border border-gray-700"
-                />
+                <div className="max-h-[calc(100vh-150px)] overflow-auto">
+                  <CodeMirror
+                    value={JSON.stringify(response.body, null, 2)}
+                    height="auto"
+                    editable={false}
+                    extensions={[
+                      json(),
+                      basicSetup({
+                        lineNumbers: false,
+                        foldGutter: false,
+                      }),
+                    ]}
+                    theme="dark"
+                    className="rounded border border-gray-700"
+                  />
+                </div>
               )}
             </div>
           </CollapsibleContent>

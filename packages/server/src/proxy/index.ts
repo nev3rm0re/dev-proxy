@@ -18,7 +18,16 @@ import { OpenAPIRecorder } from "../services/OpenAPIRecorder.js";
 import { createGunzip } from "zlib";
 import { Readable } from "stream";
 
+interface ResponseData {
+  headers: Record<string, string>;
+  status: number;
+  body: unknown;
+  targetUrl: string;
+}
+
 /**
+ * Extension of the IncomingMessage interface
+ *
  * IncomingMessage properties:
  * - headers: Object containing request headers
  * - httpVersion: HTTP version of the request (e.g. '1.1')
@@ -32,17 +41,6 @@ import { Readable } from "stream";
  * - trailers: Object containing trailer headers (if present)
  * - complete: Whether message is complete
  * - aborted: Whether request was aborted by client
- */
-
-interface ResponseData {
-  headers: Record<string, string>;
-  status: number;
-  body: unknown;
-  targetUrl: string;
-}
-
-/**
- * Extension of the IncomingMessage interface
  */
 interface ExtendedRequest extends IncomingMessage {
   isServerName?: boolean;
@@ -182,6 +180,7 @@ export function createProxyHandler(
           method,
           path: resolvedPath,
           hostname,
+          headers: req.headers as Record<string, string>,
         }));
       (req as ExtendedRequest).route = route;
 

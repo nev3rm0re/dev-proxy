@@ -16,6 +16,7 @@ export interface Route {
   method: string;
   hostname: string;
   path: string;
+  headers: Record<string, string>;
   responses: Response[];
   isLocked: boolean;
   lockedResponseIndex?: number;

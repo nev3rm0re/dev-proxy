@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,6 +9,7 @@ import { ResponseList } from "@/components/ResponseList";
 import type { EventResponseSent } from "@/types/proxy";
 import { LockButton } from "@/components/ui/lock-button";
 import { groupBy } from "lodash";
+import { useNavigate } from "react-router-dom";
 
 interface RequestListProps {
   events: EventResponseSent[];
@@ -38,6 +39,7 @@ export const RequestList: React.FC<RequestListProps> = ({
   onEditResponse,
 }) => {
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (events.length > 0) {
@@ -52,6 +54,22 @@ export const RequestList: React.FC<RequestListProps> = ({
   };
 
   const groupedRequests = groupBy(events, "path");
+
+  const handleCreateRule = (event: EventResponseSent, responseId: string) => {
+    const response = event.responses.find((r) => r.responseId === responseId);
+    if (response) {
+      navigate("/rules", {
+        state: {
+          method: event.method,
+          path: event.path,
+          responseStatus: response.status,
+          responseBody: response.body,
+          requestHeaders: event.headers,
+          responseHeaders: response.headers,
+        },
+      });
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-gray-900">
@@ -142,6 +160,9 @@ export const RequestList: React.FC<RequestListProps> = ({
                                 responseId,
                                 newBody
                               )
+                            }
+                            onCreateRule={(responseId) =>
+                              handleCreateRule(requests[0], responseId)
                             }
                           />
                         </div>

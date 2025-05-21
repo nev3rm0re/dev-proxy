@@ -1,5 +1,5 @@
-import type { ProxyRule } from "@/types/proxy";
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 export type RuleFormData = {
   method: string;
@@ -10,13 +10,30 @@ export type RuleFormData = {
   responseHeaders?: Record<string, string>;
 };
 
+interface Rule {
+  id: string;
+  method: string;
+  url: string;
+  responseStatus: number;
+  responseBody: string;
+  requestHeaders?: Record<string, string>;
+  responseHeaders?: Record<string, string>;
+}
+
 export const Rules = () => {
-  const [rules, setRules] = useState<ProxyRule[]>([]);
-  const [formData, setFormData] = useState<RuleFormData>({
-    method: "GET",
-    url: "",
-    responseStatus: 200,
-    responseBody: "",
+  const location = useLocation();
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [formData, setFormData] = useState<RuleFormData>(() => {
+    // Initialize form data from location state if available
+    const state = location.state as RuleFormData | null;
+    return (
+      state || {
+        method: "GET",
+        url: "",
+        responseStatus: 200,
+        responseBody: "",
+      }
+    );
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,10 +67,40 @@ export const Rules = () => {
         },
         body: JSON.stringify(formData),
       });
+      if (!response.ok) {
+        throw new Error("Failed to create rule");
+      }
       const newRule = await response.json();
       setRules([...rules, newRule]);
+      // Reset form after successful creation
+      setFormData({
+        method: "GET",
+        url: "",
+        responseStatus: 200,
+        responseBody: "",
+      });
     } catch (error) {
       console.error("Failed to create rule:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to create rule"
+      );
+    }
+  };
+
+  const handleDeleteRule = async (ruleId: string) => {
+    try {
+      const response = await fetch(`/api/rules/${ruleId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete rule");
+      }
+      setRules(rules.filter((rule) => rule.id !== ruleId));
+    } catch (error) {
+      console.error("Failed to delete rule:", error);
+      setError(
+        error instanceof Error ? error.message : "Failed to delete rule"
+      );
     }
   };
 
@@ -157,10 +204,7 @@ export const Rules = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    // TODO: Implement delete functionality
-                    console.log("Delete rule:", rule.id);
-                  }}
+                  onClick={() => handleDeleteRule(rule.id)}
                   className="text-red-400 hover:text-red-300"
                 >
                   Delete

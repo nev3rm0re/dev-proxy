@@ -73,15 +73,18 @@ export class StorageManager {
     method,
     path,
     hostname,
+    headers,
   }: {
     method: string;
     path: string;
     hostname: string;
+    headers: Record<string, string>;
   }): Promise<Route> {
     const route: Omit<Route, "id"> = {
       method,
       path,
       hostname,
+      headers: {},
       responses: [],
       isLocked: false,
       hits: 1,
