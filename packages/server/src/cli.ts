@@ -7,6 +7,26 @@ import {
 } from "./index.js";
 import { readFileSync } from "fs";
 
+// Add better error handling for unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise);
+  console.error("Reason:", reason);
+
+  // Print full stack trace with promise chain
+  if (reason instanceof Error) {
+    console.error("Full stack trace:");
+    console.error(reason.stack);
+
+    // If there's a cause or inner error
+    const reasonAny = reason as any;
+    if (reasonAny.cause || reasonAny.inner) {
+      const innerError = reasonAny.cause || reasonAny.inner;
+      console.error("Inner error:", innerError);
+      if (innerError.stack) console.error(innerError.stack);
+    }
+  }
+});
+
 // Read version from package.json
 const packageJson = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8")

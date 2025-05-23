@@ -105,6 +105,7 @@ const createProxyEvent = async (
     requestHeaders: req.headers as Record<string, string>,
     requestBody: (req as ExtendedRequest).body,
     responseHeaders: responseData.headers,
+    status: responseData.status,
     responseStatus: responseData.status,
     responseBody: responseData.body,
     duration: Date.now() - startTime,
@@ -156,18 +157,22 @@ export function createProxyHandler(
     // Determines target URL for each request
     // Lifecycle: Called first when request is received
     router: async (req: IncomingMessage) => {
+      // DEBUG
       const method = (req as Request).method || "GET";
+      console.debug("ROUTER CALLED", method, req.url);
 
       // Use determineTargetUrl to get targetUrl, hostname, and isServerName
       const { targetUrl, hostname, resolvedPath } = await determineTargetUrl(
         req
       );
 
-      if (!hostname) {
-        console.log("No hostname for url: ", req.url);
-        throw new Error(
-          "No valid target URL found. Please check server configurations."
-        );
+      console.debug("TARGET URL", targetUrl, hostname, resolvedPath);
+
+      if (!hostname || !targetUrl) {
+        console.log("No valid target found for url: ", req.url);
+        // Instead of throwing an error that causes hanging, we'll handle this in the error handler
+        // by returning a special target that will cause the proxy to fail gracefully
+        return "http://localhost:1"; // This will cause a connection error that we can handle
       }
 
       // Store information for pathRewrite
@@ -322,10 +327,28 @@ export function createProxyHandler(
       ) => {
         console.error("Proxy error:", err);
         if (res instanceof ServerResponse) {
-          res.statusCode = 500;
-          res.end(
-            JSON.stringify({ error: "Proxy error", message: err.message })
-          );
+          // Check if this is a routing error (no rules matched)
+          if (
+            err.message.includes("ECONNREFUSED") &&
+            err.message.includes("localhost:1")
+          ) {
+            res.statusCode = 404;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({
+                error: "No matching rules found",
+                message: `No active rules match the request ${req.method} ${req.url}. Please configure rules in the admin interface.`,
+                suggestion:
+                  "Create a forwarding rule or enable domain routing to handle this request.",
+              })
+            );
+          } else {
+            res.statusCode = 500;
+            res.setHeader("Content-Type", "application/json");
+            res.end(
+              JSON.stringify({ error: "Proxy error", message: err.message })
+            );
+          }
         }
       },
     },

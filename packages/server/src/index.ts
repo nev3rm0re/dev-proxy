@@ -162,7 +162,19 @@ export async function startServer(options: ServerOptions = {}) {
   });
 
   process.on("unhandledRejection", (reason, promise) => {
-    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+    console.error("Unhandled Rejection at:", promise);
+    console.error("Reason:", reason);
+
+    if (reason instanceof Error) {
+      console.error("Full stack trace:");
+      console.error(reason.stack);
+
+      if ((reason as any).cause || (reason as any).inner) {
+        const innerError = (reason as any).cause || (reason as any).inner;
+        console.error("Inner error:", innerError);
+        if (innerError.stack) console.error(innerError.stack);
+      }
+    }
   });
 
   return { adminServer, proxyServer };

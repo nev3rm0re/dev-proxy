@@ -127,6 +127,7 @@ export const ResponseList: React.FC<ResponseListProps> = ({
                     e.stopPropagation();
                     onLockResponse(response.responseId);
                   }}
+                  tooltip="Create cache rule from this response"
                 />
               </div>
             </div>

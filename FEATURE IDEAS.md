@@ -18,3 +18,16 @@
 - [ ] More types of events: req start, res received, loading indicator
 - [ ] Simulate latency
 - [ ] API Docs?
+
+---
+
+## v0.2: Rules System & Next Steps
+
+- [ ] Add a new "Rules" tab to the UI for managing proxy rules
+- [ ] Support multiple rule types:
+    - [ ] Pass-through (default, current behavior)
+    - [ ] Cache/Freeze: return predefined response (captured or manually set)
+    - [ ] Plugin: forward/modify requests to other APIs (e.g., for AI integration, CSV/JSON transformation, etc.)
+- [ ] Allow capturing and editing responses for cache/freeze rules
+- [ ] UI for creating, editing, and reordering rules
+- [ ] Foundation for plugin system (initial design/experimentation)

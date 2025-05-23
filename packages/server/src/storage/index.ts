@@ -1,275 +1,110 @@
 // packages/server/src/storage/index.ts
-import { JsonDB, Config } from "node-json-db";
-import { shortId } from "../utils/hash.js";
-import type { ProxyEvent, Route, Response } from "../types/index.js";
+import { RulesStorage, Rule } from "./RulesStorage.js";
+import { RequestLogsStorage } from "./RequestLogsStorage.js";
 
-export interface Server {
-  id: string;
-  name: string;
-  url: string;
-  isDefault: boolean;
-}
+// Re-export types and instances for easier imports
+export type { Rule } from "./RulesStorage.js";
+export type { ProxyEvent, Route, Response } from "../types/index.js";
 
+// Export storage instances
+export { rulesStorage } from "./RulesStorage.js";
+export { requestLogsStorage } from "./RequestLogsStorage.js";
+
+// Legacy compatibility - create a combined interface for existing code
+// This allows existing code to continue working while we migrate
 export class StorageManager {
-  private db: JsonDB;
+  private rulesStorage: RulesStorage;
+  private requestLogsStorage: RequestLogsStorage;
 
   constructor() {
-    this.db = new JsonDB(new Config("proxyDB", true, false, "/"));
-    this.init();
+    this.rulesStorage = new RulesStorage();
+    this.requestLogsStorage = new RequestLogsStorage();
   }
 
-  private async init() {
-    try {
-      await this.db.getData("/routes");
-      await this.db.getData("/servers");
-    } catch {
-      await this.db.push("/routes", {});
-      await this.db.push("/servers", []);
-    }
+  // Rules methods - delegate to RulesStorage
+  async getRules() {
+    return this.rulesStorage.getRules();
   }
 
-  async setRoutes(path: string, data: Record<string, Route>): Promise<void> {
-    await this.db.push(path, data);
+  async getRule(id: string) {
+    return this.rulesStorage.getRule(id);
   }
 
-  async createRoute(data: Omit<Route, "id">): Promise<Route> {
-    const routeId = shortId(data.method, data.path);
-    return await this.saveRoute({ id: routeId, ...data });
+  async addRule(rule: Rule) {
+    return this.rulesStorage.addRule(rule);
   }
 
-  async saveRoute(data: Route): Promise<Route> {
-    try {
-      await this.db.push(`/routes/${data.id}`, data);
-      return await this.getRoute(data.id);
-    } catch (error) {
-      console.error("Error saving route", error);
-      throw error;
-    }
+  async updateRule(id: string, updates: Partial<Rule>) {
+    return this.rulesStorage.updateRule(id, updates);
   }
 
-  async getRoute(shortId: string): Promise<Route> {
-    return await this.db.getData(`/routes/${shortId}`);
+  async deleteRule(id: string) {
+    return this.rulesStorage.deleteRule(id);
   }
 
-  /**
-   * Get a route by its URL and method
-   * @param urlPath - The URL path of the route, e.g. /api/v1/users
-   * @param method - The HTTP method of the route, e.g. GET
-   * @returns The route object if found, otherwise null
-   */
-  async getRouteByUrlMethod(
-    urlPath: string,
-    method: string
-  ): Promise<Route | null> {
-    const routeId = shortId(method, urlPath);
-    try {
-      return await this.getRoute(`${routeId}`);
-    } catch (error) {
-      return null;
-    }
+  async reorderRules(orderedIds: string[]) {
+    return this.rulesStorage.reorderRules(orderedIds);
   }
 
-  async createRouteFromRequest({
-    method,
-    path,
-    hostname,
-    headers,
-  }: {
-    method: string;
-    path: string;
-    hostname: string;
-    headers: Record<string, string>;
-  }): Promise<Route> {
-    const route: Omit<Route, "id"> = {
-      method,
-      path,
-      hostname,
-      headers: {},
-      responses: [],
-      isLocked: false,
-      hits: 1,
-    };
-    return await this.createRoute(route);
+  // Request logs methods - delegate to RequestLogsStorage
+  async setRoutes(path: string, data: any) {
+    return this.requestLogsStorage.setRoutes(path, data);
   }
 
-  async toggleResponseLock(
-    requestId: string,
-    responseId: string
-  ): Promise<Response | null> {
-    const route = await this.getRoute(requestId);
-    if (!route) {
-      throw new Error(`Route ${requestId} not found`);
-    }
-    const response = route.responses.find((r) => r.responseId === responseId);
-    if (!response) {
-      throw new Error(`Response ${responseId} not found`);
-    }
-    response.isLocked = !response.isLocked;
-    if (response.isLocked) {
-      response.lockedBody = null;
-    }
-    route.isLocked = route.responses.some((r) => r.isLocked);
-    await this.saveRoute(route);
-    return response;
+  async createRoute(data: any) {
+    return this.requestLogsStorage.createRoute(data);
   }
 
-  async findRandomResponse(route: Route): Promise<Response | null> {
-    return route.responses?.length
-      ? route.responses[Math.floor(Math.random() * route.responses.length)]
-      : null;
+  async saveRoute(data: any) {
+    return this.requestLogsStorage.saveRoute(data);
   }
 
-  async findLockedResponse(route: Route): Promise<Response | undefined> {
-    const lockedResponses = route.responses?.filter((r) => r.isLocked);
-    if (!lockedResponses?.length) return undefined;
-    return lockedResponses[Math.floor(Math.random() * lockedResponses.length)];
+  async getRoute(shortId: string) {
+    return this.requestLogsStorage.getRoute(shortId);
   }
 
-  async getRoutes(): Promise<Record<string, Route>> {
-    try {
-      return await this.db.getData("/routes");
-    } catch (error) {
-      console.error("Error getting routes", error);
-      return {};
-    }
+  async getRouteByUrlMethod(urlPath: string, method: string) {
+    return this.requestLogsStorage.getRouteByUrlMethod(urlPath, method);
   }
 
-  async addRouteResponse(
-    route: Route,
-    proxyEvent: ProxyEvent,
-    lockRoute: boolean = false
-  ): Promise<void> {
-    const normalizedResponse = {
-      responseId: shortId(proxyEvent.responseBody),
-      headers: proxyEvent.responseHeaders,
-      body: proxyEvent.responseBody,
-      status: proxyEvent.responseStatus,
-      count: 1,
-      isLocked: false,
-    };
-
-    route.hits++;
-    route.isLocked = lockRoute || false;
-    route.responses.push(normalizedResponse);
-
-    await this.saveRoute(route);
+  async createRouteFromRequest(data: any) {
+    return this.requestLogsStorage.createRouteFromRequest(data);
   }
 
-  async findRoute(routeId: string): Promise<Route> {
-    const routes = await this.getRoutes();
-    const route = routes[routeId];
-    if (!route) {
-      throw new Error(`Route ${routeId} not found`);
-    }
-    return route;
+  async toggleResponseLock(requestId: string, responseId: string) {
+    return this.requestLogsStorage.toggleResponseLock(requestId, responseId);
   }
 
-  async toggleRouteLock(routeId: string): Promise<Route> {
-    // flatten routes
-    const routes = await this.getRoutes();
-    const route = routes[routeId];
-    if (!route) {
-      throw new Error(`Route ${routeId} not found`);
-    }
-
-    route.isLocked = !route.isLocked;
-
-    await this.saveRoute(route);
-    return route;
+  async findRandomResponse(route: any) {
+    return this.requestLogsStorage.findRandomResponse(route);
   }
 
-  // Server management methods
-  async getServers(): Promise<Server[]> {
-    try {
-      return (await this.db.getData("/servers")) || [];
-    } catch (error) {
-      console.error("Error getting servers", error);
-      return [];
-    }
+  async findLockedResponse(route: any) {
+    return this.requestLogsStorage.findLockedResponse(route);
   }
 
-  async addServer(server: Server): Promise<void> {
-    try {
-      const servers = await this.getServers();
-      servers.push(server);
-      await this.db.push("/servers", servers);
-    } catch (error) {
-      console.error("Error adding server", error);
-      throw error;
-    }
+  async getRoutes() {
+    return this.requestLogsStorage.getRoutes();
   }
 
-  async setDefaultServer(id: string): Promise<void> {
-    try {
-      const servers = await this.getServers();
-      const serverExists = servers.some((s) => s.id === id);
-
-      if (!serverExists) {
-        throw new Error("Server not found");
-      }
-
-      const updatedServers = servers.map((server) => ({
-        ...server,
-        isDefault: server.id === id,
-      }));
-
-      await this.db.push("/servers", updatedServers);
-    } catch (error) {
-      console.error("Error setting default server", error);
-      throw error;
-    }
+  async addRouteResponse(route: any, proxyEvent: any, lockRoute?: boolean) {
+    return this.requestLogsStorage.addRouteResponse(
+      route,
+      proxyEvent,
+      lockRoute
+    );
   }
 
-  async deleteServer(id: string): Promise<void> {
-    try {
-      const servers = await this.getServers();
-      const serverToDelete = servers.find((s) => s.id === id);
-
-      if (!serverToDelete) {
-        throw new Error("Server not found");
-      }
-
-      const updatedServers = servers.filter((server) => server.id !== id);
-
-      // If we deleted the default server and there are other servers,
-      // make the first remaining server the default
-      if (serverToDelete.isDefault && updatedServers.length > 0) {
-        updatedServers[0].isDefault = true;
-      }
-
-      await this.db.push("/servers", updatedServers);
-    } catch (error) {
-      console.error("Error deleting server", error);
-      throw error;
-    }
+  async findRoute(routeId: string) {
+    return this.requestLogsStorage.findRoute(routeId);
   }
 
-  async updateServer(
-    id: string,
-    updates: { name: string; url: string }
-  ): Promise<void> {
-    try {
-      const servers = await this.getServers();
-      const serverIndex = servers.findIndex((s) => s.id === id);
-
-      if (serverIndex === -1) {
-        throw new Error("Server not found");
-      }
-
-      servers[serverIndex] = {
-        ...servers[serverIndex],
-        ...updates,
-      };
-
-      await this.db.push("/servers", servers);
-    } catch (error) {
-      console.error("Error updating server", error);
-      throw error;
-    }
+  async toggleRouteLock(routeId: string) {
+    return this.requestLogsStorage.toggleRouteLock(routeId);
   }
 
-  clearEvents(): void {
-    this.db.push("/routes", {});
+  clearEvents() {
+    return this.requestLogsStorage.clearEvents();
   }
 }
 

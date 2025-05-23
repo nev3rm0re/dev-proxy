@@ -2,18 +2,7 @@ import express from "express";
 import { storage } from "../storage/index.js";
 import { v4 as uuidv4 } from "uuid";
 import type { RequestHandler } from "express";
-
-interface Server {
-  id: string;
-  name: string;
-  url: string;
-  isDefault: boolean;
-}
-
-interface ServerRequestBody {
-  name: string;
-  url: string;
-}
+import type { Rule } from "../storage/index.js";
 
 const router = express.Router();
 
@@ -89,81 +78,6 @@ router.post("/events/:requestId/:responseId/body", async (req, res) => {
   }
 });
 
-router.get("/settings/servers", async (req, res) => {
-  try {
-    const servers = (await storage.getServers()) || [];
-    res.json(servers);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch servers" });
-  }
-});
-
-router.post<Record<string, never>, Record<string, never>, ServerRequestBody>(
-  "/settings/servers",
-  (async (req, res) => {
-    try {
-      const { name, url } = req.body;
-
-      if (!name || !url) {
-        return res.status(400).json({ error: "Name and URL are required" });
-      }
-
-      const servers = (await storage.getServers()) || [];
-      const isDefault = servers.length === 0;
-
-      const newServer: Server = {
-        id: uuidv4(),
-        name,
-        url,
-        isDefault,
-      };
-
-      await storage.addServer(newServer);
-      res.json(newServer);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to add server" });
-    }
-  }) as RequestHandler
-);
-
-router.post("/settings/servers/:id/default", async (req, res) => {
-  try {
-    const { id } = req.params;
-    await storage.setDefaultServer(id);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to set default server" });
-  }
-});
-
-router.delete("/settings/servers/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    await storage.deleteServer(id);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete server" });
-  }
-});
-
-router.put<{ id: string }, Record<string, never>, ServerRequestBody>(
-  "/settings/servers/:id",
-  (async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { name, url } = req.body;
-      if (!name || !url) {
-        return res.status(400).json({ error: "Name and URL are required" });
-      }
-
-      await storage.updateServer(id, { name, url });
-      res.json({ success: true });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update server" });
-    }
-  }) as RequestHandler
-);
-
 router.delete("/history", async (req, res) => {
   await storage.clearEvents();
   res.json({ success: true });
@@ -171,30 +85,96 @@ router.delete("/history", async (req, res) => {
 
 router.get("/rules", async (req, res) => {
   try {
-    const history = await storage.getRoutes();
-    const rules = Object.values(history)
-      .filter((route) => route.isLocked)
-      .map((route) => {
-        // Find the locked response (if any)
-        const lockedResponse = route.responses.find((r) => r.isLocked);
-
-        return {
-          id: route.id,
-          method: route.method,
-          url: route.path,
-          responseStatus: lockedResponse?.status || 200,
-          responseBody:
-            lockedResponse?.lockedBody || lockedResponse?.body || "",
-          requestHeaders: route.requestHeaders,
-          responseHeaders: lockedResponse?.headers || {},
-        };
-      });
-
+    const rules = await storage.getRules();
     res.json(rules);
   } catch (err) {
     console.error("Failed to fetch rules:", err);
     res.status(500).json({ error: "Failed to fetch rules" });
   }
 });
+
+// Add the missing POST endpoint for creating rules
+router.post("/rules", async (req, res) => {
+  try {
+    const ruleData = req.body as Omit<Rule, "id">;
+
+    // Generate an ID if not provided
+    const rule: Rule = {
+      ...ruleData,
+      id: uuidv4(),
+    };
+
+    // Add rule to storage
+    const savedRule = await storage.addRule(rule);
+
+    // Return the created rule
+    res.status(201).json(savedRule);
+  } catch (err) {
+    console.error("Failed to create rule:", err);
+    res.status(500).json({ error: "Failed to create rule" });
+  }
+});
+
+// Add a PUT endpoint to update rules
+router.put<{ id: string }, unknown, Rule>("/rules/:id", (async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Update the rule
+    const updatedRule = await storage.updateRule(id, updates);
+
+    if (!updatedRule) {
+      return res.status(404).json({ error: "Rule not found" });
+    }
+
+    res.json(updatedRule);
+  } catch (err) {
+    console.error("Failed to update rule:", err);
+    res.status(500).json({ error: "Failed to update rule" });
+  }
+}) as RequestHandler);
+
+// Update the delete endpoint to use the storage method
+router.delete<{ id: string }>("/rules/:id", (async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Remove the rule from storage
+    const success = await storage.deleteRule(id);
+
+    if (!success) {
+      return res.status(404).json({ error: "Rule not found" });
+    }
+
+    res.status(200).json({ success: true });
+  } catch (err) {
+    console.error("Failed to delete rule:", err);
+    res.status(500).json({ error: "Failed to delete rule" });
+  }
+}) as RequestHandler);
+
+// Update the reorder endpoint to use the storage method
+router.patch<
+  Record<string, never>,
+  Record<string, unknown>,
+  { orderedIds: string[] }
+>("/rules/reorder", (async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds)) {
+      return res.status(400).json({ error: "Invalid request" });
+    }
+
+    // Reorder the rules using the storage method
+    const reorderedRules = await storage.reorderRules(orderedIds);
+
+    res.status(200).json({ success: true, rules: reorderedRules });
+  } catch (err) {
+    console.error("Failed to reorder rules:", err);
+    res.status(500).json({ error: "Failed to reorder rules" });
+  }
+}) as RequestHandler);
 
 export default router;

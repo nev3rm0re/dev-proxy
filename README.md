@@ -2,6 +2,8 @@
 
 A development proxy server for API request monitoring and modification with a React-based UI.
 
+**Current Stable: v0.1**
+
 Github: https://github.com/nev3rm0re/dev-proxy
 NPM: https://www.npmjs.com/package/@4ev3rm0re/dev-proxy-server
 
@@ -12,6 +14,20 @@ NPM: https://www.npmjs.com/package/@4ev3rm0re/dev-proxy-server
 - Response modification capabilities
 - Project-based configuration
 - Modern React + TypeScript interface with shadcn/ui components
+
+---
+
+## Upcoming in v0.2: Rules System & Extensibility
+
+- New "Rules" tab in the UI for managing proxy rules
+- Multiple rule types:
+    - **Pass-through**: Default, forwards requests to remote server (current behavior)
+    - **Cache/Freeze**: Return predefined response (captured or manually set/edited)
+    - **Plugin**: Forward/modify requests to other APIs, with support for request/response transformation (e.g., for AI, CSV/JSON, etc.)
+- UI for creating, editing, and reordering rules
+- Foundation for a plugin system for advanced use cases
+
+---
 
 ## Installation
 

@@ -51,6 +51,69 @@ export interface ProxyState {
   getEvent: (id: string) => EventResponseSent | undefined;
 }
 
+// Base rule interface
+export interface BaseRule {
+  id?: string;
+  name: string;
+  order: number;
+  isActive: boolean;
+  isTerminating: boolean; // Whether to stop processing other rules after this one
+  description?: string;
+}
+
+// Domain rule type - matches domain patterns
+export interface DomainRule extends BaseRule {
+  type: "domain";
+  pattern: string; // Regular expression for domain matching
+}
+
+// Forward rule type - forwards requests to a target URL
+export interface ForwardingRule extends BaseRule {
+  type: "forwarding";
+  method: string | string[]; // HTTP method(s) to match
+  pathPattern: string; // Path pattern to match
+  targetUrl: string; // URL to forward to
+  pathTransformation?: string; // How to transform the path
+}
+
+// Static response rule - returns predefined response
+export interface StaticResponseRule extends BaseRule {
+  type: "static";
+  method: string | string[]; // HTTP method(s) to match
+  pathPattern: string; // Path pattern to match
+  responseStatus: number;
+  responseBody: string;
+  responseHeaders?: Record<string, string>;
+}
+
+// Plugin rule - uses a plugin to generate the response
+export interface PluginRule extends BaseRule {
+  type: "plugin";
+  pluginType: string; // e.g., 'jwt'
+  method: string | string[]; // HTTP method(s) to match
+  pathPattern: string; // Path pattern to match
+  responseStatus: number;
+  responseTemplate: string;
+  pluginConfig: Record<string, unknown>; // Plugin-specific configuration
+}
+
+// JWT plugin specific configuration
+export interface JwtPluginConfig {
+  secret: string;
+  kid?: string;
+  exp?: number; // Expiration in seconds
+  additionalClaims: Record<string, unknown>; // Additional JWT claims
+  responseFormat?: "raw" | "json"; // Format of the response
+  jsonProperty?: string; // Property name when responseFormat is "json"
+}
+
+export type Rule =
+  | DomainRule
+  | ForwardingRule
+  | StaticResponseRule
+  | PluginRule;
+
+// Legacy ProxyRule type for backward compatibility
 export type ProxyRule = {
   id?: string;
   method: string;
