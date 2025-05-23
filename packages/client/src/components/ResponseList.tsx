@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Edit, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -7,9 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import type { EventResponseSent, ProxyResponse } from "@/types/proxy";
-import { LockButton } from "./ui/lock-button";
 import CodeMirror from "@uiw/react-codemirror";
-import { vim } from "@replit/codemirror-vim";
 import { json } from "@codemirror/lang-json";
 import { basicSetup } from "@uiw/codemirror-extensions-basic-setup";
 
@@ -17,22 +15,15 @@ interface ResponseListProps {
   route: EventResponseSent;
   responses: ProxyResponse[];
   method: string;
-  onLockResponse: (responseId: string) => void;
-  onEditResponse: (responseId: string, newBody: string) => void;
   onCreateRule: (responseId: string) => void;
 }
 
 export const ResponseList: React.FC<ResponseListProps> = ({
   responses,
   method,
-  onLockResponse,
-  onEditResponse,
   onCreateRule,
 }) => {
   const [expandedResponseIds, setExpandedResponseIds] = useState<string[]>([]);
-  const [editingResponseId, setEditingResponseId] = useState<string | null>(
-    null
-  );
 
   const handleToggleExpand = (responseId: string) => {
     setExpandedResponseIds((prev) =>
@@ -40,15 +31,6 @@ export const ResponseList: React.FC<ResponseListProps> = ({
         ? prev.filter((id) => id !== responseId)
         : [...prev, responseId]
     );
-  };
-
-  const handleEditResponse = (responseId: string) => {
-    setEditingResponseId(responseId);
-  };
-
-  const handleSaveEdit = (responseId: string, newBody: string) => {
-    onEditResponse(responseId, newBody);
-    setEditingResponseId(null);
   };
 
   return (
@@ -118,118 +100,32 @@ export const ResponseList: React.FC<ResponseListProps> = ({
                     onCreateRule(response.responseId);
                   }}
                   className="text-blue-400 hover:text-blue-300"
+                  title="Create rule from this response"
                 >
                   <Plus size={16} />
+                  Create Rule
                 </Button>
-                <LockButton
-                  isLocked={response.isLocked ?? false}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onLockResponse(response.responseId);
-                  }}
-                  tooltip="Create cache rule from this response"
-                />
               </div>
             </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="p-2 bg-gray-900 rounded">
-              {response.isLocked ? (
-                <>
-                  {editingResponseId === response.responseId ? (
-                    <div>
-                      <div className="max-h-[calc(100vh-150px)] overflow-auto">
-                        <CodeMirror
-                          value={JSON.stringify(
-                            response.lockedBody ?? response.body,
-                            null,
-                            2
-                          )}
-                          height="auto"
-                          extensions={[
-                            vim(),
-                            json(),
-                            basicSetup({
-                              lineNumbers: false,
-                              foldGutter: false,
-                            }),
-                          ]}
-                          theme="dark"
-                          onChange={(value) => {
-                            (
-                              document.querySelector(
-                                ".cm-editor"
-                              ) as HTMLElement
-                            ).setAttribute("data-value", value);
-                          }}
-                          className="rounded border border-gray-700"
-                        />
-                      </div>
-                      <Button
-                        onClick={() =>
-                          handleSaveEdit(
-                            response.responseId,
-                            (
-                              document.querySelector(
-                                ".cm-editor"
-                              ) as HTMLElement
-                            ).getAttribute("data-value") || ""
-                          )
-                        }
-                        className="mt-2"
-                      >
-                        Save
-                      </Button>
-                    </div>
-                  ) : (
-                    <div>
-                      <div className="max-h-[calc(100vh-150px)] overflow-auto">
-                        <CodeMirror
-                          value={JSON.stringify(
-                            response.lockedBody ?? response.body,
-                            null,
-                            2
-                          )}
-                          height="auto"
-                          extensions={[
-                            json(),
-                            basicSetup({
-                              lineNumbers: false,
-                              foldGutter: false,
-                            }),
-                          ]}
-                          theme="dark"
-                          className="rounded border border-gray-700"
-                        />
-                      </div>
-                      <Button
-                        onClick={() => handleEditResponse(response.responseId)}
-                        className="mt-2"
-                      >
-                        <Edit size={16} className="mr-2" />
-                        Edit
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="max-h-[calc(100vh-150px)] overflow-auto">
-                  <CodeMirror
-                    value={JSON.stringify(response.body, null, 2)}
-                    height="auto"
-                    editable={false}
-                    extensions={[
-                      json(),
-                      basicSetup({
-                        lineNumbers: false,
-                        foldGutter: false,
-                      }),
-                    ]}
-                    theme="dark"
-                    className="rounded border border-gray-700"
-                  />
-                </div>
-              )}
+              <div className="max-h-[calc(100vh-150px)] overflow-auto">
+                <CodeMirror
+                  value={JSON.stringify(response.body, null, 2)}
+                  height="auto"
+                  editable={false}
+                  extensions={[
+                    json(),
+                    basicSetup({
+                      lineNumbers: false,
+                      foldGutter: false,
+                    }),
+                  ]}
+                  theme="dark"
+                  className="rounded border border-gray-700"
+                />
+              </div>
             </div>
           </CollapsibleContent>
         </Collapsible>

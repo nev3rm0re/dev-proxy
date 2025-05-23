@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Plus } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -13,20 +13,13 @@ import type {
   ForwardingRule,
   DomainRule,
 } from "@/types/proxy";
-import { LockButton } from "@/components/ui/lock-button";
 import { groupBy } from "lodash";
 import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface RequestListProps {
   events: EventResponseSent[];
   incomingEventId?: string | null;
-  onLockEvent: (eventId: string) => void;
-  onLockResponse: (eventId: string, responseId: string) => void;
-  onEditResponse: (
-    eventId: string,
-    responseId: string,
-    newBody: string
-  ) => void;
 }
 
 const PRIORITY_METHODS = ["post", "put", "get", "delete"];
@@ -38,12 +31,7 @@ const sortByMethodPriority = (a: string, b: string) => {
   return priorityA - priorityB;
 };
 
-export const RequestList: React.FC<RequestListProps> = ({
-  events,
-  onLockEvent,
-  onLockResponse,
-  onEditResponse,
-}) => {
+export const RequestList: React.FC<RequestListProps> = ({ events }) => {
   const [expandedPath, setExpandedPath] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const navigate = useNavigate();
@@ -74,51 +62,37 @@ export const RequestList: React.FC<RequestListProps> = ({
     setExpandedPath(expandedPath === path ? null : path);
   };
 
-  const createRuleFromResponse = async (
+  // Create rule from path (wildcard method, empty response)
+  const createRuleFromPath = (event: EventResponseSent) => {
+    navigate("/rules", {
+      state: {
+        method: "*",
+        path: event.path,
+        hostname: event.hostname,
+        ruleType: "wildcard",
+      },
+    });
+  };
+
+  // Create rule from specific response
+  const createRuleFromResponse = (
     event: EventResponseSent,
     responseId: string
   ) => {
     const response = event.responses.find((r) => r.responseId === responseId);
     if (!response) return;
 
-    try {
-      const rule = {
-        name: `${event.method} ${event.path}`,
-        type: "static" as const,
+    navigate("/rules", {
+      state: {
         method: event.method,
-        pathPattern: event.path,
+        path: event.path,
+        hostname: event.hostname,
         responseStatus: response.status,
-        responseBody:
-          typeof response.body === "string"
-            ? response.body
-            : JSON.stringify(response.body, null, 2),
+        responseBody: response.body,
         responseHeaders: response.headers,
-        isActive: true,
-        isTerminating: true,
-        order: rules.length,
-        description: `Auto-created rule from locked response`,
-      };
-
-      const apiResponse = await fetch("/api/rules", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(rule),
-      });
-
-      if (!apiResponse.ok) {
-        throw new Error("Failed to create rule");
-      }
-
-      const newRule = await apiResponse.json();
-      setRules([...rules, newRule]);
-
-      // Navigate to rules tab to show the new rule
-      navigate("/rules");
-    } catch (error) {
-      console.error("Failed to create rule:", error);
-    }
+        ruleType: "specific",
+      },
+    });
   };
 
   // Function to find matching rule for a request
@@ -183,7 +157,6 @@ export const RequestList: React.FC<RequestListProps> = ({
             0
           );
           const methodGroups = groupBy(pathRequests, "method");
-          const isAnyRequestLocked = pathRequests.some((req) => req.isLocked);
           const matchingRule = findMatchingRule(pathRequests[0]);
 
           return (
@@ -211,9 +184,24 @@ export const RequestList: React.FC<RequestListProps> = ({
                     )}
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <div className="text-gray-300 truncate">
-                      {pathRequests[0].hostname}
-                      {path}
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-300 truncate">
+                        {pathRequests[0].hostname}
+                        {path}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          createRuleFromPath(pathRequests[0]);
+                        }}
+                        className="text-green-400 hover:text-green-300 text-xs"
+                        title="Create wildcard rule for this path"
+                      >
+                        <Plus size={12} />
+                        Rule
+                      </Button>
                     </div>
                   </div>
                   <div className="flex items-center justify-center min-w-[100px]">
@@ -239,10 +227,6 @@ export const RequestList: React.FC<RequestListProps> = ({
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-gray-400 text-sm">{totalHits}</span>
-                    <LockButton
-                      isLocked={isAnyRequestLocked}
-                      onClick={() => onLockEvent(pathRequests[0].id)}
-                    />
                   </div>
                 </div>
               </CollapsibleTrigger>
@@ -266,16 +250,6 @@ export const RequestList: React.FC<RequestListProps> = ({
                             route={requests[0]}
                             responses={allResponses}
                             method={method}
-                            onLockResponse={(responseId) =>
-                              onLockResponse(requests[0].id, responseId)
-                            }
-                            onEditResponse={(responseId, newBody) =>
-                              onEditResponse(
-                                requests[0].id,
-                                responseId,
-                                newBody
-                              )
-                            }
                             onCreateRule={(responseId) =>
                               createRuleFromResponse(requests[0], responseId)
                             }

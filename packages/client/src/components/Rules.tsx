@@ -11,6 +11,7 @@ import {
   KeyRound,
   Edit,
   RefreshCw,
+  GripVertical,
 } from "lucide-react";
 import type {
   PluginRule,
@@ -33,6 +34,7 @@ type RuleFormData = {
   responseTemplate?: string;
   pluginType?: string;
   targetUrl?: string;
+  responseHeaders?: Record<string, string>;
   isActive: boolean;
   isTerminating: boolean;
   order: number;
@@ -52,27 +54,64 @@ export const Rules = () => {
     toggleRuleActive,
     resetToDefaults,
     isRuleComplete,
+    reorderRules,
   } = useRulesStore();
 
   const [formData, setFormData] = useState<RuleFormData>(() => {
     // Get initial data from location state if available
-    const state = location.state;
+    const state = location.state as any;
     if (state) {
-      return {
-        name: `Rule for ${state.method} ${state.url || state.path}`,
-        type: "static",
-        method: state.method || "GET",
-        pathPattern: state.url || state.path || "",
-        responseStatus: state.responseStatus || 200,
-        responseBody: state.responseBody
-          ? typeof state.responseBody === "string"
-            ? state.responseBody
-            : JSON.stringify(state.responseBody, null, 2)
-          : "",
-        isActive: true,
-        isTerminating: true,
-        order: rules.length,
-      };
+      if (state.ruleType === "wildcard") {
+        // Creating rule from path click (wildcard)
+        return {
+          name: `Wildcard rule for ${state.path}`,
+          type: "static",
+          method: "*",
+          pathPattern: state.path || "",
+          responseStatus: 200,
+          responseBody: "",
+          isActive: true,
+          isTerminating: true,
+          order: rules.length,
+          description: "Wildcard rule created from path",
+        };
+      } else if (state.ruleType === "specific") {
+        // Creating rule from response click (specific)
+        return {
+          name: `${state.method} ${state.path}`,
+          type: "static",
+          method: state.method || "GET",
+          pathPattern: state.path || "",
+          responseStatus: state.responseStatus || 200,
+          responseBody: state.responseBody
+            ? typeof state.responseBody === "string"
+              ? state.responseBody
+              : JSON.stringify(state.responseBody, null, 2)
+            : "",
+          responseHeaders: state.responseHeaders || {},
+          isActive: true,
+          isTerminating: true,
+          order: rules.length,
+          description: "Rule created from specific response",
+        };
+      } else {
+        // Legacy support for old navigation state format
+        return {
+          name: `Rule for ${state.method} ${state.url || state.path}`,
+          type: "static",
+          method: state.method || "GET",
+          pathPattern: state.url || state.path || "",
+          responseStatus: state.responseStatus || 200,
+          responseBody: state.responseBody
+            ? typeof state.responseBody === "string"
+              ? state.responseBody
+              : JSON.stringify(state.responseBody, null, 2)
+            : "",
+          isActive: true,
+          isTerminating: true,
+          order: rules.length,
+        };
+      }
     }
 
     return {
@@ -102,6 +141,8 @@ export const Rules = () => {
   const [highlightedRuleId, setHighlightedRuleId] = useState<string | null>(
     null
   );
+  const [draggedRuleId, setDraggedRuleId] = useState<string | null>(null);
+  const [dragOverRuleId, setDragOverRuleId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRules();
@@ -125,11 +166,67 @@ export const Rules = () => {
       method?: string;
       path?: string;
       responseBody?: any;
+      ruleType?: string;
     };
-    if (state && (state.method || state.path || state.responseBody)) {
+    if (
+      state &&
+      (state.method || state.path || state.responseBody || state.ruleType)
+    ) {
       setShowForm(true);
     }
   }, [location.state]);
+
+  // Handle drag and drop for reordering
+  const handleDragStart = (e: React.DragEvent, ruleId: string) => {
+    setDraggedRuleId(ruleId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent, ruleId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverRuleId(ruleId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverRuleId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetRuleId: string) => {
+    e.preventDefault();
+    setDragOverRuleId(null);
+
+    if (!draggedRuleId || draggedRuleId === targetRuleId) {
+      setDraggedRuleId(null);
+      return;
+    }
+
+    // Reorder rules
+    const draggedIndex = rules.findIndex((r) => r.id === draggedRuleId);
+    const targetIndex = rules.findIndex((r) => r.id === targetRuleId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const newRules = [...rules];
+    const [draggedRule] = newRules.splice(draggedIndex, 1);
+    newRules.splice(targetIndex, 0, draggedRule);
+
+    // Update order numbers and send to server
+    const orderedIds = newRules.map((rule) => rule.id!);
+
+    try {
+      await reorderRules(orderedIds);
+    } catch (error) {
+      console.error("Failed to reorder rules:", error);
+    }
+
+    setDraggedRuleId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedRuleId(null);
+    setDragOverRuleId(null);
+  };
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -804,16 +901,28 @@ export const Rules = () => {
           rules.map((rule) => (
             <div
               key={rule.id}
-              className={`p-4 rounded transition-all duration-500 ${
+              draggable
+              onDragStart={(e) => handleDragStart(e, rule.id!)}
+              onDragOver={(e) => handleDragOver(e, rule.id!)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, rule.id!)}
+              onDragEnd={handleDragEnd}
+              className={`p-4 rounded transition-all duration-500 cursor-move ${
                 highlightedRuleId === rule.id
                   ? "bg-blue-800 border-2 border-blue-400"
+                  : dragOverRuleId === rule.id
+                  ? "bg-gray-700 border-2 border-blue-300"
                   : "bg-gray-800"
               }`}
             >
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-2">
+                  <GripVertical
+                    size={16}
+                    className="text-gray-500 hover:text-gray-300 cursor-grab active:cursor-grabbing"
+                  />
                   <button
-                    onClick={() => handleRuleToggle(rule.id)}
+                    onClick={() => handleRuleToggle(rule.id!)}
                     className={`${
                       rule.isActive ? "text-green-500" : "text-gray-500"
                     }${
@@ -884,7 +993,7 @@ export const Rules = () => {
                     <Edit size={16} />
                   </button>
                   <button
-                    onClick={() => handleRuleDelete(rule.id)}
+                    onClick={() => handleRuleDelete(rule.id!)}
                     className="text-red-400 hover:text-red-300"
                     title="Delete Rule"
                   >

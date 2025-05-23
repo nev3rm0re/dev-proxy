@@ -2,7 +2,6 @@ import { useProxyStore } from "@/store/proxyStore";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { RequestList } from "./RequestList";
 import React, { useEffect, useState } from "react";
-import type { ProxyResponse } from "@/types/proxy";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Rules } from "./Rules";
@@ -17,10 +16,9 @@ import { Rules } from "./Rules";
 export const Layout = () => {
   const wsUrl = `/ws`;
   const { isConnected } = useWebSocket(wsUrl);
-  const { events, setEvents, incomingEventId, updateEvent, getEvent } =
-    useProxyStore();
-  const [filterTerm, setFilterTerm] = useState("");
+  const { events, setEvents, incomingEventId } = useProxyStore();
   const [activeTab, setActiveTab] = useState<"log" | "rules">("log");
+  const [filterTerm, setFilterTerm] = useState("");
 
   useEffect(() => {
     // Make an api call to get the initial events
@@ -31,80 +29,6 @@ export const Layout = () => {
     };
     fetchEvents();
   }, [setEvents]);
-
-  const handleLockEvent = async (eventId: string) => {
-    try {
-      const isLocked = getEvent(eventId)?.isLocked;
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: "PUT",
-        body: JSON.stringify({ isLocked: !isLocked }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-      updateEvent(data.data);
-    } catch (error) {
-      console.error("Failed to lock event:", error);
-    }
-  };
-
-  const updateRouteResponse = (
-    routeId: string,
-    responseId: string,
-    newResponse: ProxyResponse
-  ) => {
-    const event = getEvent(routeId);
-    if (event) {
-      const response = event.responses.findIndex(
-        (r: ProxyResponse) => r.responseId === responseId
-      );
-      if (response !== -1) {
-        console.log("Event found, replacing response");
-        event.responses[response] = { ...newResponse };
-        updateEvent(event);
-      }
-    }
-  };
-
-  const handleLockResponse = async (routeId: string, responseId: string) => {
-    try {
-      const updatedResponse = await fetch(
-        `/api/events/${routeId}/${responseId}`,
-        {
-          method: "POST",
-        }
-      );
-      const data = await updatedResponse.json();
-      updateRouteResponse(routeId, responseId, data.data);
-    } catch (error) {
-      console.error("Failed to lock response:", error);
-    }
-  };
-
-  const handleEditResponse = async (
-    routeId: string,
-    responseId: string,
-    newBody: string
-  ) => {
-    try {
-      const response = await fetch(
-        `/api/events/${routeId}/${responseId}/body`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: newBody,
-        }
-      );
-      const data = await response.json();
-      updateRouteResponse(routeId, responseId, data.data);
-    } catch (error) {
-      console.error("Failed to edit response:", error);
-    }
-  };
 
   const handleClearEvents = async () => {
     if (
@@ -226,9 +150,6 @@ export const Layout = () => {
           <RequestList
             events={filteredEvents}
             incomingEventId={incomingEventId}
-            onLockEvent={handleLockEvent}
-            onLockResponse={handleLockResponse}
-            onEditResponse={handleEditResponse}
           />
         ) : (
           <Rules />

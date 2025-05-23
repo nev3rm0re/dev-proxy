@@ -2,7 +2,6 @@ import { useProxyStore } from "@/store/proxyStore";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { RequestList } from "./components/RequestList";
 import React, { useEffect, useState } from "react";
-import type { ProxyResponse } from "@/types/proxy";
 import { Settings as SettingsIcon, Trash2 } from "lucide-react";
 import { Routes, Route, Link, useLocation } from "react-router-dom";
 import { Rules } from "./components/Rules";
@@ -12,8 +11,7 @@ import { BuildHashBadge } from "./components/BuildHashBadge";
 export const App = () => {
   const wsUrl = `/ws`;
   const { isConnected } = useWebSocket(wsUrl);
-  const { events, setEvents, incomingEventId, updateEvent, getEvent } =
-    useProxyStore();
+  const { events, setEvents, incomingEventId } = useProxyStore();
   const [filterTerm, setFilterTerm] = useState("");
   const location = useLocation();
 
@@ -29,120 +27,6 @@ export const App = () => {
     };
     fetchEvents();
   }, [setEvents]);
-
-  const handleLockEvent = async (eventId: string) => {
-    try {
-      const isLocked = getEvent(eventId)?.isLocked;
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: "PUT",
-        body: JSON.stringify({ isLocked: !isLocked }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-      updateEvent(data.data);
-    } catch (error) {
-      console.error("Failed to lock event:", error);
-    }
-  };
-
-  const updateRouteResponse = (
-    routeId: string,
-    responseId: string,
-    newResponse: ProxyResponse
-  ) => {
-    const event = getEvent(routeId);
-    if (event) {
-      const response = event.responses.findIndex(
-        (r: ProxyResponse) => r.responseId === responseId
-      );
-      if (response !== -1) {
-        console.log("Event found, replacing response");
-        event.responses[response] = { ...newResponse };
-        updateEvent(event);
-      }
-    }
-  };
-
-  const handleLockResponse = async (routeId: string, responseId: string) => {
-    try {
-      // Get the event and response data
-      const event = getEvent(routeId);
-      if (!event) {
-        console.error("Event not found");
-        return;
-      }
-
-      const response = event.responses.find((r) => r.responseId === responseId);
-      if (!response) {
-        console.error("Response not found");
-        return;
-      }
-
-      // Create a static rule with the cached response
-      const rule = {
-        name: `Cache: ${event.method} ${event.path}`,
-        type: "static" as const,
-        method: event.method,
-        pathPattern: event.path,
-        responseStatus: response.status,
-        responseBody:
-          typeof response.body === "string"
-            ? response.body
-            : JSON.stringify(response.body, null, 2),
-        responseHeaders: response.headers,
-        isActive: true,
-        isTerminating: true,
-        order: 0, // High priority for cache rules
-        description: `Auto-created cache rule from locked response`,
-      };
-
-      const apiResponse = await fetch("/api/rules", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(rule),
-      });
-
-      if (!apiResponse.ok) {
-        throw new Error("Failed to create cache rule");
-      }
-
-      const newRule = await apiResponse.json();
-      console.log("Cache rule created:", newRule);
-
-      // Optionally, you could navigate to rules tab to show the new rule
-      // navigate("/rules", { state: { highlightRule: newRule.id } });
-    } catch (error) {
-      console.error("Failed to create cache rule:", error);
-    }
-  };
-
-  const handleEditResponse = async (
-    routeId: string,
-    responseId: string,
-    newBody: string
-  ) => {
-    try {
-      const response = await fetch(
-        `/api/events/${routeId}/${responseId}/body`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: newBody,
-        }
-      );
-      const data = await response.json();
-      updateRouteResponse(routeId, responseId, data.data);
-    } catch (error) {
-      console.error("Failed to edit response:", error);
-    }
-  };
 
   const handleClearEvents = async () => {
     if (
@@ -273,9 +157,6 @@ export const App = () => {
                       <RequestList
                         events={filteredEvents}
                         incomingEventId={incomingEventId}
-                        onLockEvent={handleLockEvent}
-                        onLockResponse={handleLockResponse}
-                        onEditResponse={handleEditResponse}
                       />
                     }
                   />
