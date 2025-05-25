@@ -1,0 +1,33 @@
+title: Dev-Proxy Documentation
+description: A powerful development proxy server with rule-based request/response manipulation
+baseurl: "/dev-proxy"
+url: "https://nev3rm0re.github.io"
+
+# Theme
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Navigation
+header_pages:
+  - README.md
+  - rules-api.md
+  - use-cases.md
+
+# Exclude files
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/ 

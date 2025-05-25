@@ -1,3 +1,4 @@
+import React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Rules } from "./Rules";
 
@@ -29,6 +30,23 @@ This component makes real API calls to \`/api/rules\`. In Storybook, you'll see 
 **To see the working component:**
 1. Run \`yarn dev\` to start the development servers
 2. Visit \`http://localhost:3000/rules\` to see the full functionality
+
+**Example Rule Data Structure:**
+\`\`\`json
+{
+  "id": "1",
+  "name": "Health Check",
+  "type": "static",
+  "method": "GET", 
+  "pathPattern": "/health",
+  "responseStatus": 200,
+  "responseBody": "{\\"status\\": \\"ok\\"}",
+  "isActive": true,
+  "isTerminating": true,
+  "order": 0,
+  "description": "Simple health check endpoint"
+}
+\`\`\`
         `,
       },
     },
@@ -117,10 +135,12 @@ export const Architecture: Story = {
         story: `
 **Technical Architecture:**
 
-**Rule Types Merged:**
-- Removed separate \`DomainRule\` type to simplify the system
-- Enhanced \`ForwardingRule\` to handle domain patterns with capture groups
-- All domain routing now uses forwarding rules with regex patterns
+**Rule Types:**
+- **Static Response**: Returns predefined response body and status
+- **Forwarding**: Proxies requests to external URLs with pattern matching
+- **JWT Plugin**: Generates JWT tokens with configurable claims
+- **Request Modifier**: Modifies incoming requests (typically non-terminating)
+- **Response Modifier**: Modifies responses from other rules
 
 **Display Logic:**
 The \`formatRuleDisplay()\` function handles different rule presentations:
@@ -135,15 +155,106 @@ The \`formatRuleDisplay()\` function handles different rule presentations:
 - Error handling and loading states
 
 **Form Integration:**
-- Modal-based rule editing with \`RuleFormModal\` component
+- Modal-based rule editing with \`RuleForm\` component
 - Validates rule completeness before saving
-- Supports all rule types: static, forwarding, and JWT plugins
+- Supports all rule types with type-specific forms
 - Auto-focus and keyboard navigation support
 
 **Server Integration:**
-- Rules are persisted in \`proxyDB.json\`
+- Rules are persisted in \`rulesDB.json\`
 - Rule execution order follows the displayed order
 - Terminating rules stop the chain, non-terminating allow fallthrough
+        `,
+      },
+    },
+  },
+};
+
+// Mock data examples for documentation
+export const MockDataExamples: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: `
+**Example Rule Configurations:**
+
+**1. Health Check (Static Response):**
+\`\`\`json
+{
+  "name": "Health Check",
+  "type": "static",
+  "method": "GET",
+  "pathPattern": "/health",
+  "responseStatus": 200,
+  "responseBody": "{\\"status\\": \\"ok\\", \\"timestamp\\": \\"2024-01-01T00:00:00Z\\"}",
+  "isActive": true,
+  "isTerminating": true
+}
+\`\`\`
+
+**2. API Forwarding:**
+\`\`\`json
+{
+  "name": "API Forwarding", 
+  "type": "forwarding",
+  "method": "*",
+  "pathPattern": "/api/*",
+  "targetUrl": "https://api.example.com",
+  "isActive": true,
+  "isTerminating": true
+}
+\`\`\`
+
+**3. JWT Token Generator:**
+\`\`\`json
+{
+  "name": "JWT Token Generator",
+  "type": "plugin",
+  "pluginType": "jwt",
+  "method": "GET", 
+  "pathPattern": "/auth/token",
+  "responseStatus": 200,
+  "responseTemplate": "\${jwt}",
+  "pluginConfig": {
+    "secret": "your-secret-key",
+    "exp": 3600,
+    "additionalClaims": {
+      "userId": "12345",
+      "role": "admin"
+    }
+  },
+  "isActive": true,
+  "isTerminating": true
+}
+\`\`\`
+
+**4. Domain Routing:**
+\`\`\`json
+{
+  "name": "Domain Routing",
+  "type": "forwarding",
+  "method": "*",
+  "pathPattern": "/([a-zA-Z0-9.-]+)(.*)",
+  "targetUrl": "https://$1$2",
+  "isActive": true,
+  "isTerminating": true
+}
+\`\`\`
+
+**5. Non-terminating Request Modifier:**
+\`\`\`json
+{
+  "name": "Add Auth Header",
+  "type": "request-modifier", 
+  "method": "*",
+  "pathPattern": "/api/*",
+  "requestModifications": {
+    "headers.Authorization": "Bearer {{env.API_TOKEN}}"
+  },
+  "isActive": true,
+  "isTerminating": false
+}
+\`\`\`
         `,
       },
     },
