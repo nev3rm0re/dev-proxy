@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useRulesStore } from "@/store/rulesStore";
-import { JwtPlugin } from "./plugins/JwtPlugin";
+import { RuleForm, type RuleFormData } from "./RuleForm";
 import {
   PlusCircle,
   Trash2,
   Play,
   Square,
-  X,
   KeyRound,
   Edit,
   RefreshCw,
@@ -19,27 +18,7 @@ import type {
   StaticResponseRule,
   Rule,
   ForwardingRule,
-  DomainRule,
 } from "@/types/proxy";
-
-// This type helps us manage the form data for different rule types
-type RuleFormData = {
-  name: string;
-  type: "static" | "plugin" | "forwarding" | "domain";
-  method?: string | string[];
-  pathPattern?: string;
-  pattern?: string;
-  responseStatus?: number;
-  responseBody?: string;
-  responseTemplate?: string;
-  pluginType?: string;
-  targetUrl?: string;
-  responseHeaders?: Record<string, string>;
-  isActive: boolean;
-  isTerminating: boolean;
-  order: number;
-  description?: string;
-};
 
 export const Rules = () => {
   const location = useLocation();
@@ -57,84 +36,7 @@ export const Rules = () => {
     reorderRules,
   } = useRulesStore();
 
-  const [formData, setFormData] = useState<RuleFormData>(() => {
-    // Get initial data from location state if available
-    const state = location.state as any;
-    if (state) {
-      if (state.ruleType === "wildcard") {
-        // Creating rule from path click (wildcard)
-        return {
-          name: `Wildcard rule for ${state.path}`,
-          type: "static",
-          method: "*",
-          pathPattern: state.path || "",
-          responseStatus: 200,
-          responseBody: "",
-          isActive: true,
-          isTerminating: true,
-          order: rules.length,
-          description: "Wildcard rule created from path",
-        };
-      } else if (state.ruleType === "specific") {
-        // Creating rule from response click (specific)
-        return {
-          name: `${state.method} ${state.path}`,
-          type: "static",
-          method: state.method || "GET",
-          pathPattern: state.path || "",
-          responseStatus: state.responseStatus || 200,
-          responseBody: state.responseBody
-            ? typeof state.responseBody === "string"
-              ? state.responseBody
-              : JSON.stringify(state.responseBody, null, 2)
-            : "",
-          responseHeaders: state.responseHeaders || {},
-          isActive: true,
-          isTerminating: true,
-          order: rules.length,
-          description: "Rule created from specific response",
-        };
-      } else {
-        // Legacy support for old navigation state format
-        return {
-          name: `Rule for ${state.method} ${state.url || state.path}`,
-          type: "static",
-          method: state.method || "GET",
-          pathPattern: state.url || state.path || "",
-          responseStatus: state.responseStatus || 200,
-          responseBody: state.responseBody
-            ? typeof state.responseBody === "string"
-              ? state.responseBody
-              : JSON.stringify(state.responseBody, null, 2)
-            : "",
-          isActive: true,
-          isTerminating: true,
-          order: rules.length,
-        };
-      }
-    }
-
-    return {
-      name: "New Rule",
-      type: "static",
-      method: "GET",
-      pathPattern: "",
-      responseStatus: 200,
-      responseBody: "",
-      isActive: true,
-      isTerminating: true,
-      order: rules.length,
-    };
-  });
-
   const [showForm, setShowForm] = useState(false);
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [jwtConfig, setJwtConfig] = useState<JwtPluginConfig>({
-    secret: "",
-    kid: "",
-    exp: 3600,
-    additionalClaims: {},
-  });
   const [editMode, setEditMode] = useState(false);
   const [editRuleId, setEditRuleId] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
@@ -143,6 +45,9 @@ export const Rules = () => {
   );
   const [draggedRuleId, setDraggedRuleId] = useState<string | null>(null);
   const [dragOverRuleId, setDragOverRuleId] = useState<string | null>(null);
+  const [initialFormData, setInitialFormData] = useState<Partial<RuleFormData>>(
+    {}
+  );
 
   useEffect(() => {
     fetchRules();
@@ -165,16 +70,55 @@ export const Rules = () => {
     const state = location.state as {
       method?: string;
       path?: string;
-      responseBody?: any;
+      responseBody?: string | object;
+      responseHeaders?: Record<string, string>;
+      responseStatus?: number;
       ruleType?: string;
     };
+
     if (
       state &&
       (state.method || state.path || state.responseBody || state.ruleType)
     ) {
+      if (state.ruleType === "wildcard") {
+        // Creating rule from path click (wildcard)
+        setInitialFormData({
+          name: `Wildcard rule for ${state.path}`,
+          type: "static",
+          method: "*",
+          pathPattern: state.path || "",
+          responseStatus: 200,
+          responseBody: "",
+          isActive: true,
+          isTerminating: true,
+          order: rules.length,
+          description: "Wildcard rule created from path",
+        });
+      } else if (state.ruleType === "specific") {
+        // Creating rule from response click (specific)
+        setInitialFormData({
+          name: `${state.method} ${state.path}`,
+          type: "static",
+          method: state.method || "GET",
+          pathPattern: state.path || "",
+          responseStatus: state.responseStatus || 200,
+          responseBody: state.responseBody
+            ? typeof state.responseBody === "string"
+              ? state.responseBody
+              : JSON.stringify(state.responseBody, null, 2)
+            : "",
+          responseHeaders: state.responseHeaders || {},
+          isActive: true,
+          isTerminating: true,
+          order: rules.length,
+          description: "Rule created from specific response",
+        });
+      }
       setShowForm(true);
+      setEditMode(false);
+      setEditRuleId(null);
     }
-  }, [location.state]);
+  }, [location.state, rules.length]);
 
   // Handle drag and drop for reordering
   const handleDragStart = (e: React.DragEvent, ruleId: string) => {
@@ -228,49 +172,10 @@ export const Rules = () => {
     setDragOverRuleId(null);
   };
 
-  const validateForm = () => {
-    const errors: Record<string, string> = {};
-
-    if (!formData.name?.trim()) {
-      errors.name = "Name is required";
-    }
-
-    // Validate based on rule type
-    if (formData.type === "forwarding") {
-      if (!formData.targetUrl?.trim()) {
-        errors.targetUrl = "Target URL is required";
-      }
-      if (!formData.pathPattern?.trim()) {
-        errors.pathPattern = "Path pattern is required";
-      }
-    } else if (formData.type === "domain") {
-      if (!formData.pattern?.trim()) {
-        errors.pattern = "Domain pattern is required";
-      }
-    } else if (formData.type === "static") {
-      if (!formData.pathPattern?.trim()) {
-        errors.pathPattern = "Path pattern is required";
-      }
-    } else if (formData.type === "plugin" && formData.pluginType === "jwt") {
-      if (!formData.pathPattern?.trim()) {
-        errors.pathPattern = "Path pattern is required";
-      }
-      if (!jwtConfig.secret) {
-        errors.secret = "Secret key is required for JWT generation";
-      }
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleFormSubmit = async (
+    formData: RuleFormData,
+    jwtConfig?: JwtPluginConfig
+  ) => {
     try {
       if (formData.type === "plugin" && formData.pluginType === "jwt") {
         const pluginRule: Omit<PluginRule, "id"> = {
@@ -313,22 +218,6 @@ export const Rules = () => {
         } else {
           await addRule(forwardingRule);
         }
-      } else if (formData.type === "domain") {
-        const domainRule: Omit<DomainRule, "id"> = {
-          name: formData.name,
-          type: "domain",
-          pattern: formData.pattern || "(.+)/*",
-          isActive: formData.isActive,
-          isTerminating: formData.isTerminating,
-          order: formData.order,
-          description: formData.description,
-        };
-
-        if (editMode && editRuleId) {
-          await updateRule({ ...domainRule, id: editRuleId });
-        } else {
-          await addRule(domainRule);
-        }
       } else {
         const staticRule: Omit<StaticResponseRule, "id"> = {
           name: formData.name,
@@ -350,45 +239,24 @@ export const Rules = () => {
         }
       }
 
-      resetForm();
       setShowForm(false);
       setEditMode(false);
       setEditRuleId(null);
+      setInitialFormData({});
     } catch (error) {
       console.error("Error saving rule:", error);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "New Rule",
-      type: "static",
-      method: "GET",
-      pathPattern: "",
-      responseStatus: 200,
-      responseBody: "",
-      isActive: true,
-      isTerminating: true,
-      order: rules.length,
-    });
-    setJwtConfig({
-      secret: "",
-      kid: "",
-      exp: 3600,
-      additionalClaims: {},
-    });
-    setFormErrors({});
-  };
-
   const handleEditRule = (rule: Rule) => {
     // Set form to edit mode
     setEditMode(true);
-    setEditRuleId(rule.id);
+    setEditRuleId(rule.id || null);
 
     // Convert rule to formData format
     if (rule.type === "plugin" && (rule as PluginRule).pluginType === "jwt") {
       const pluginRule = rule as PluginRule;
-      setFormData({
+      setInitialFormData({
         name: rule.name,
         type: "plugin",
         pluginType: "jwt",
@@ -401,12 +269,9 @@ export const Rules = () => {
         order: rule.order,
         description: rule.description,
       });
-
-      // Set JWT config
-      setJwtConfig(pluginRule.pluginConfig as unknown as JwtPluginConfig);
     } else if (rule.type === "forwarding") {
       const forwardingRule = rule as ForwardingRule;
-      setFormData({
+      setInitialFormData({
         name: rule.name,
         type: "forwarding",
         method: forwardingRule.method,
@@ -417,20 +282,9 @@ export const Rules = () => {
         order: rule.order,
         description: rule.description,
       });
-    } else if (rule.type === "domain") {
-      const domainRule = rule as DomainRule;
-      setFormData({
-        name: rule.name,
-        type: "domain",
-        pattern: domainRule.pattern,
-        isActive: rule.isActive,
-        isTerminating: rule.isTerminating,
-        order: rule.order,
-        description: rule.description,
-      });
     } else {
       const staticRule = rule as StaticResponseRule;
-      setFormData({
+      setInitialFormData({
         name: rule.name,
         type: "static",
         method: staticRule.method,
@@ -449,8 +303,7 @@ export const Rules = () => {
   };
 
   const createZendeskTokenRule = () => {
-    // Configure the form for a Zendesk token rule
-    setFormData({
+    setInitialFormData({
       name: "Zendesk Token Generator",
       type: "plugin",
       pluginType: "jwt",
@@ -464,20 +317,6 @@ export const Rules = () => {
       description: "Generates a JWT token for Zendesk authentication",
     });
 
-    // Configure the JWT specific settings
-    setJwtConfig({
-      secret: "",
-      kid: "",
-      exp: 3600, // 1 hour
-      additionalClaims: {
-        scope: "user",
-        external_id: "user_123", // Placeholder, can be changed by user
-      },
-      responseFormat: "json",
-      jsonProperty: "jwt",
-    });
-
-    // Show the form with pre-populated values
     setShowForm(true);
     setEditMode(false);
     setEditRuleId(null);
@@ -527,6 +366,98 @@ export const Rules = () => {
     }
   };
 
+  const handleCloseForm = () => {
+    setShowForm(false);
+    setEditMode(false);
+    setEditRuleId(null);
+    setInitialFormData({});
+  };
+
+  const handleNewRule = () => {
+    setInitialFormData({
+      name: "New Rule",
+      type: "static",
+      method: "GET",
+      pathPattern: "/*",
+      responseStatus: 200,
+      responseBody: "",
+      isActive: true,
+      isTerminating: true,
+      order: rules.length,
+    });
+    setShowForm(true);
+    setEditMode(false);
+    setEditRuleId(null);
+  };
+
+  // Helper function to format rule display
+  const formatRuleDisplay = (rule: Rule) => {
+    if (rule.type === "forwarding") {
+      const forwardingRule = rule as ForwardingRule;
+      const method = Array.isArray(forwardingRule.method)
+        ? forwardingRule.method.join(", ")
+        : forwardingRule.method;
+
+      // Check if it's a domain-based pattern
+      const isDomainPattern =
+        forwardingRule.pathPattern.includes("([a-zA-Z0-9-]+") &&
+        forwardingRule.pathPattern.includes("\\.[a-zA-Z0-9-]+");
+
+      if (isDomainPattern && forwardingRule.targetUrl?.includes("$1")) {
+        return {
+          method,
+          pattern: "<domain.name>/*",
+          arrow: "→",
+          target: forwardingRule.targetUrl
+            .replace("$1", "domain.name")
+            .replace("$2", "/*"),
+        };
+      }
+
+      return {
+        method,
+        pattern: forwardingRule.pathPattern,
+        arrow: "→",
+        target: forwardingRule.targetUrl || "[Not configured]",
+      };
+    }
+
+    if (rule.type === "static") {
+      const staticRule = rule as StaticResponseRule;
+      const method = Array.isArray(staticRule.method)
+        ? staticRule.method.join(", ")
+        : staticRule.method;
+
+      return {
+        method,
+        pattern: staticRule.pathPattern,
+        arrow: "→",
+        target: `Static Response (${staticRule.responseStatus})`,
+      };
+    }
+
+    if (rule.type === "plugin") {
+      const pluginRule = rule as PluginRule;
+      const method = Array.isArray(pluginRule.method)
+        ? pluginRule.method.join(", ")
+        : pluginRule.method;
+
+      return {
+        method,
+        pattern: pluginRule.pathPattern,
+        arrow: "→",
+        target: `${pluginRule.pluginType?.toUpperCase()} Plugin`,
+      };
+    }
+
+    return {
+      method: "Unknown",
+      pattern: "Unknown",
+      arrow: "→",
+      target: "Unknown",
+    };
+  };
+
   if (isLoading && rules.length === 0 && !resetting) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -542,120 +473,6 @@ export const Rules = () => {
       </div>
     );
   }
-
-  const renderRuleTypeForm = () => {
-    switch (formData.type) {
-      case "forwarding":
-        return (
-          <div className="mt-4">
-            <div>
-              <label className="block text-sm text-gray-400">Target URL</label>
-              <input
-                type="text"
-                value={formData.targetUrl || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, targetUrl: e.target.value })
-                }
-                className={`w-full px-3 py-2 bg-gray-800 text-white rounded border ${
-                  formErrors.targetUrl ? "border-red-500" : "border-gray-700"
-                }`}
-                placeholder="https://example.com"
-              />
-              {formErrors.targetUrl && (
-                <p className="text-red-500 text-xs mt-1">
-                  {formErrors.targetUrl}
-                </p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                The URL where requests will be forwarded to. You can use $1, $2,
-                etc. to reference capture groups from the path pattern.
-              </p>
-            </div>
-          </div>
-        );
-
-      case "domain":
-        return (
-          <div className="mt-4">
-            <div>
-              <label className="block text-sm text-gray-400">
-                Domain Pattern
-              </label>
-              <input
-                type="text"
-                value={formData.pattern || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, pattern: e.target.value })
-                }
-                className={`w-full px-3 py-2 bg-gray-800 text-white rounded border ${
-                  formErrors.pattern ? "border-red-500" : "border-gray-700"
-                }`}
-                placeholder="(.+)/*"
-              />
-              {formErrors.pattern && (
-                <p className="text-red-500 text-xs mt-1">
-                  {formErrors.pattern}
-                </p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Regular expression pattern for the domain. Use capture groups
-                like (.+) to match and extract parts of the domain.
-              </p>
-            </div>
-          </div>
-        );
-
-      case "plugin":
-        if (formData.pluginType === "jwt") {
-          return (
-            <div className="mt-4">
-              <div>
-                <label className="block text-sm text-gray-400">
-                  Response Template
-                </label>
-                <textarea
-                  value={formData.responseTemplate || ""}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      responseTemplate: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 h-32 bg-gray-800 text-white rounded border border-gray-700 font-mono"
-                  placeholder="Use ${jwt} to insert the generated JWT"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Note: If using JSON response format, this template is ignored.
-                </p>
-              </div>
-              <div className="mt-4">
-                <JwtPlugin config={jwtConfig} onChange={setJwtConfig} />
-              </div>
-            </div>
-          );
-        }
-        return null;
-
-      case "static":
-      default:
-        return (
-          <div className="mt-4">
-            <div>
-              <label className="block text-sm text-gray-400">
-                Response Body
-              </label>
-              <textarea
-                value={formData.responseBody || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, responseBody: e.target.value })
-                }
-                className="w-full px-3 py-2 h-32 bg-gray-800 text-white rounded border border-gray-700 font-mono"
-              />
-            </div>
-          </div>
-        );
-    }
-  };
 
   return (
     <div className="p-4">
@@ -680,201 +497,23 @@ export const Rules = () => {
             <span>Zendesk Token</span>
           </button>
           <button
-            onClick={() => {
-              resetForm();
-              setShowForm(!showForm);
-              setEditMode(false);
-              setEditRuleId(null);
-            }}
+            onClick={handleNewRule}
             className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500"
           >
-            {showForm ? <X size={16} /> : <PlusCircle size={16} />}
-            <span>{showForm ? "Cancel" : "Add Rule"}</span>
+            <PlusCircle size={16} />
+            <span>Add Rule</span>
           </button>
         </div>
       </div>
 
-      {/* Rule Creation/Edit Form */}
-      {showForm && (
-        <div className="bg-gray-800 p-4 rounded mb-6">
-          <h3 className="text-lg text-white mb-4">
-            {editMode ? "Edit Rule" : "Create New Rule"}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400">Name</label>
-              <input
-                type="text"
-                value={formData.name || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                className={`w-full px-3 py-2 bg-gray-800 text-white rounded border ${
-                  formErrors.name ? "border-red-500" : "border-gray-700"
-                }`}
-              />
-              {formErrors.name && (
-                <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm text-gray-400">Rule Type</label>
-              <select
-                value={formData.type}
-                onChange={(e) => {
-                  const newType = e.target.value as RuleFormData["type"];
-                  setFormData({
-                    ...formData,
-                    type: newType,
-                    // Reset type-specific fields
-                    ...(newType === "plugin" ? { pluginType: "jwt" } : {}),
-                  });
-                }}
-                className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
-              >
-                <option value="forwarding">Forward Requests</option>
-                <option value="domain">Domain Rule</option>
-                <option value="static">Static Response</option>
-                <option value="plugin">Plugin (Generated Response)</option>
-              </select>
-            </div>
-
-            {formData.type === "plugin" && (
-              <div>
-                <label className="block text-sm text-gray-400">
-                  Plugin Type
-                </label>
-                <select
-                  value={formData.pluginType || "jwt"}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      pluginType: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
-                >
-                  <option value="jwt">JWT Generation</option>
-                </select>
-              </div>
-            )}
-
-            {(formData.type === "forwarding" ||
-              formData.type === "static" ||
-              formData.type === "plugin") && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400">Method</label>
-                  <select
-                    value={
-                      typeof formData.method === "string"
-                        ? formData.method
-                        : formData.method?.[0] || "GET"
-                    }
-                    onChange={(e) =>
-                      setFormData({ ...formData, method: e.target.value })
-                    }
-                    className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
-                  >
-                    <option value="*">ANY (*)</option>
-                    <option value="GET">GET</option>
-                    <option value="POST">POST</option>
-                    <option value="PUT">PUT</option>
-                    <option value="DELETE">DELETE</option>
-                    <option value="PATCH">PATCH</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-400">
-                    Path Pattern
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.pathPattern || ""}
-                    onChange={(e) =>
-                      setFormData({ ...formData, pathPattern: e.target.value })
-                    }
-                    className={`w-full px-3 py-2 bg-gray-800 text-white rounded border ${
-                      formErrors.pathPattern
-                        ? "border-red-500"
-                        : "border-gray-700"
-                    }`}
-                    placeholder="/api/*"
-                  />
-                  {formErrors.pathPattern && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {formErrors.pathPattern}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {(formData.type === "static" || formData.type === "plugin") && (
-              <div>
-                <label className="block text-sm text-gray-400">
-                  Response Status
-                </label>
-                <input
-                  type="number"
-                  value={formData.responseStatus || 200}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      responseStatus: Number(e.target.value),
-                    })
-                  }
-                  className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
-                />
-              </div>
-            )}
-
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isTerminating}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isTerminating: e.target.checked,
-                    })
-                  }
-                  className="form-checkbox h-4 w-4"
-                />
-                <span className="text-sm text-gray-400">
-                  Terminating (stop processing rules after match)
-                </span>
-              </label>
-            </div>
-
-            {renderRuleTypeForm()}
-
-            <div className="flex justify-end gap-2 pt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  resetForm();
-                  setShowForm(false);
-                  setEditMode(false);
-                  setEditRuleId(null);
-                }}
-                className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
-              >
-                {editMode ? "Update Rule" : "Create Rule"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Rule Form Modal */}
+      <RuleForm
+        isOpen={showForm}
+        onClose={handleCloseForm}
+        onSubmit={handleFormSubmit}
+        initialData={initialFormData}
+        editMode={editMode}
+      />
 
       {/* Rules List */}
       <div className="space-y-3">
@@ -890,7 +529,7 @@ export const Rules = () => {
                 Create Zendesk Token Rule
               </button>
               <button
-                onClick={() => setShowForm(true)}
+                onClick={handleNewRule}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
               >
                 Create Generic Rule
@@ -945,9 +584,9 @@ export const Rules = () => {
                       <span className="text-white font-medium">
                         {rule.name}
                       </span>
-                      {rule.isTerminating && (
-                        <span className="text-xs bg-blue-900 text-blue-200 px-2 py-0.5 rounded">
-                          Terminating
+                      {!rule.isTerminating && (
+                        <span className="text-xs bg-orange-900 text-orange-200 px-2 py-0.5 rounded">
+                          Non-terminating
                         </span>
                       )}
                       {!isRuleComplete(rule) && (
@@ -957,30 +596,25 @@ export const Rules = () => {
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-blue-400 font-mono text-sm">
-                        {rule.type === "forwarding" &&
-                          (Array.isArray((rule as ForwardingRule).method)
-                            ? (rule as ForwardingRule).method.join(", ")
-                            : (rule as ForwardingRule).method)}
-                        {rule.type === "static" &&
-                          (Array.isArray((rule as StaticResponseRule).method)
-                            ? (rule as StaticResponseRule).method.join(", ")
-                            : (rule as StaticResponseRule).method)}
-                        {rule.type === "plugin" &&
-                          (Array.isArray((rule as PluginRule).method)
-                            ? (rule as PluginRule).method.join(", ")
-                            : (rule as PluginRule).method)}
-                        {rule.type === "domain" && "DOMAIN"}
-                      </span>
-                      <span className="text-white font-mono text-sm">
-                        {rule.type === "domain"
-                          ? (rule as DomainRule).pattern
-                          : rule.type === "forwarding"
-                          ? (rule as ForwardingRule).pathPattern
-                          : rule.type === "static"
-                          ? (rule as StaticResponseRule).pathPattern
-                          : (rule as PluginRule).pathPattern}
-                      </span>
+                      {(() => {
+                        const display = formatRuleDisplay(rule);
+                        return (
+                          <>
+                            <span className="text-blue-400 font-mono text-sm">
+                              {display.method}
+                            </span>
+                            <span className="text-white font-mono text-sm">
+                              {display.pattern}
+                            </span>
+                            <span className="text-gray-400 text-sm">
+                              {display.arrow}
+                            </span>
+                            <span className="text-green-400 font-mono text-sm">
+                              {display.target}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1010,8 +644,6 @@ export const Rules = () => {
                       ? `Plugin (${(rule as PluginRule).pluginType})`
                       : rule.type === "forwarding"
                       ? "Forward Requests"
-                      : rule.type === "domain"
-                      ? "Domain Rule"
                       : "Static Response"}
                   </span>
                 </div>
@@ -1036,8 +668,10 @@ export const Rules = () => {
                             "json" && (
                             <p>
                               Response: JSON with{" "}
-                              {(rule as PluginRule).pluginConfig
-                                ?.jsonProperty || "jwt"}{" "}
+                              {String(
+                                (rule as PluginRule).pluginConfig
+                                  ?.jsonProperty || "jwt"
+                              )}{" "}
                               property
                             </p>
                           )}
@@ -1050,13 +684,6 @@ export const Rules = () => {
                       <pre className="whitespace-pre-wrap break-all">
                         {(rule as ForwardingRule).targetUrl ||
                           "[Not configured]"}
-                      </pre>
-                    </div>
-                  ) : rule.type === "domain" ? (
-                    <div>
-                      <div className="mb-1">Domain Pattern:</div>
-                      <pre className="whitespace-pre-wrap break-all">
-                        {(rule as DomainRule).pattern}
                       </pre>
                     </div>
                   ) : (

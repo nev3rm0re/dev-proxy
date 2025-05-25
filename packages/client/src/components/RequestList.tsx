@@ -7,12 +7,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ResponseList } from "@/components/ResponseList";
 import type { EventResponseSent } from "@/types/proxy";
-import type {
-  Rule,
-  StaticResponseRule,
-  ForwardingRule,
-  DomainRule,
-} from "@/types/proxy";
+import type { Rule, StaticResponseRule, ForwardingRule } from "@/types/proxy";
 import { groupBy } from "lodash";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -120,15 +115,6 @@ export const RequestList: React.FC<RequestListProps> = ({ events }) => {
           ) {
             return rule;
           }
-        }
-      } else if (rule.type === "domain") {
-        // Domain rule matching logic could be added here
-        const domainRule = rule as DomainRule;
-        if (
-          domainRule.pattern &&
-          event.hostname.match(new RegExp(domainRule.pattern))
-        ) {
-          return rule;
         }
       }
     }

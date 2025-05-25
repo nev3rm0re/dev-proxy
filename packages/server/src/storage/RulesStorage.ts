@@ -11,6 +11,7 @@ export interface Rule {
   responseStatus: number;
   responseBody?: string;
   responseTemplate?: string;
+  responseHeaders?: Record<string, string>;
   pluginType?: string;
   pluginConfig?: Record<string, unknown>;
   isActive: boolean;
@@ -88,17 +89,17 @@ export class RulesStorage {
 
     const domainRule: Rule = {
       id: uuidv4(),
-      name: "Domain routing",
-      type: "domain",
+      name: "Domain-based forwarding",
+      type: "forwarding",
       method: "*",
-      pathPattern: "/([a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*(:\\d+)?)/.*",
+      pathPattern: "/([a-zA-Z0-9-]+(\\.[a-zA-Z0-9-]+)*(:\\d+)?)(.*)",
       responseStatus: 200,
-      targetUrl: "https://$1",
+      targetUrl: "https://$1$2",
       isActive: true,
       isTerminating: true,
       order: 0,
       description:
-        "Route requests based on domain in the path, preserving the rest of the path",
+        "Forward requests based on domain in the path, preserving the rest of the path",
     };
 
     // Use direct database access to avoid circular dependency

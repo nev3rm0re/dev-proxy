@@ -1,0 +1,7 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- We're using Turborepo and yarn
+- Project is split into three repositories, one of them is [package.json](mdc:packages/types/package.json), where we should keep shared types

@@ -1,31 +1,25 @@
-import React from "react";
+import { BrowserRouter } from "react-router-dom";
 import "../src/index.css";
-import { Layout } from "../src/components/Layout";
 
-/** @type {import('@storybook/react').Preview} */
+/** @type { import('@storybook/react').Preview } */
 const preview = {
   parameters: {
-    actions: { argTypesRegex: "^on[A-Z].*" },
     controls: {
       matchers: {
         color: /(background|color)$/i,
-        date: /Date$/,
+        date: /Date$/i,
       },
     },
     layout: "fullscreen",
   },
   decorators: [
-    (Story, context) => {
-      // Skip layout if the story explicitly disables it
-      if (context.parameters.layout?.decorator === false) {
-        return <Story />;
-      }
-      return (
-        <Layout>
+    (Story) => (
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-900">
           <Story />
-        </Layout>
-      );
-    },
+        </div>
+      </BrowserRouter>
+    ),
   ],
 };
 

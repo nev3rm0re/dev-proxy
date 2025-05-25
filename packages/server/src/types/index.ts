@@ -63,12 +63,6 @@ export interface BaseRule {
   description?: string;
 }
 
-// Domain rule type - matches domain patterns
-export interface DomainRule extends BaseRule {
-  type: "domain";
-  pattern: string; // Regular expression for domain matching
-}
-
 // Forward rule type - forwards requests to a target URL
 export interface ForwardingRule extends BaseRule {
   type: "forwarding";
@@ -100,8 +94,4 @@ export interface PluginRule extends BaseRule {
 }
 
 // Union type for all rule types
-export type Rule =
-  | DomainRule
-  | ForwardingRule
-  | StaticResponseRule
-  | PluginRule;
+export type Rule = ForwardingRule | StaticResponseRule | PluginRule;

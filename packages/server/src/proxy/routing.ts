@@ -8,10 +8,18 @@ const isDomainLike = (str: string): boolean => {
 
 /**
  * Checks if a rule applies to a given request
- * @returns true if the rule matches the request
+ * @returns { matches: boolean, targetUrl?: string, resolvedPath?: string } match result with optional URL transformation
  */
-function ruleMatchesRequest(rule: Rule, method: string, path: string): boolean {
-  // Handle different rule types
+function ruleMatchesRequest(
+  rule: Rule,
+  method: string,
+  path: string
+): {
+  matches: boolean;
+  targetUrl?: string;
+  resolvedPath?: string;
+} {
+  // Handle forwarding rules
   if (rule.type === "forwarding") {
     // Check if method matches
     const methodMatches =
@@ -19,26 +27,60 @@ function ruleMatchesRequest(rule: Rule, method: string, path: string): boolean {
       rule.method === method ||
       (Array.isArray(rule.method) && rule.method.includes(method));
 
-    // Check if path matches pattern
-    // Simple wildcard replacement for now; could be enhanced with regex
-    const pathPattern = rule.pathPattern.replace("/*", ".*");
-    const pathRegex = new RegExp(`^${pathPattern}$`);
-    const pathMatches = pathRegex.test(path);
+    if (!methodMatches) {
+      return { matches: false };
+    }
 
-    return methodMatches && pathMatches;
-  }
+    // Check if path matches pattern with support for capture groups
+    const pathPattern = rule.pathPattern;
 
-  if (rule.type === "domain") {
-    // For domain rules, we check if the first part of the path matches the domain pattern
-    const urlParts = path.split("/").filter(Boolean);
-    const firstPart = urlParts[0] || "";
+    try {
+      const pathRegex = new RegExp(`^${pathPattern}$`);
+      const match = path.match(pathRegex);
 
-    // Simple check - match domain-like URLs
-    return isDomainLike(firstPart);
+      if (match) {
+        // If we have a target URL with capture group placeholders, replace them
+        let targetUrl = rule.targetUrl || "";
+        let resolvedPath = path;
+
+        if (targetUrl && match.length > 1) {
+          // Replace $1, $2, etc. with captured groups
+          for (let i = 1; i < match.length; i++) {
+            targetUrl = targetUrl.replace(
+              new RegExp(`\\$${i}`, "g"),
+              match[i] || ""
+            );
+          }
+
+          // For domain-based routing, extract the path after domain
+          if (pathPattern.includes("(.*")) {
+            const pathCaptureIndex = pathPattern.split("(").length - 1; // Last capture group is typically the path
+            resolvedPath = match[pathCaptureIndex] || "/";
+            if (!resolvedPath.startsWith("/")) {
+              resolvedPath = "/" + resolvedPath;
+            }
+          }
+        }
+
+        return { matches: true, targetUrl, resolvedPath };
+      }
+    } catch (error) {
+      console.error(
+        `Invalid regex pattern in rule ${rule.name}: ${pathPattern}`,
+        error
+      );
+    }
+
+    // Fallback to simple wildcard matching
+    const simplePattern = pathPattern.replace(/\*/g, ".*");
+    const simpleRegex = new RegExp(`^${simplePattern}$`);
+    if (simpleRegex.test(path)) {
+      return { matches: true, targetUrl: rule.targetUrl, resolvedPath: path };
+    }
   }
 
   // For other rule types, return false as they don't affect routing
-  return false;
+  return { matches: false };
 }
 
 export async function determineTargetUrl(req: IncomingMessage): Promise<{
@@ -59,7 +101,6 @@ export async function determineTargetUrl(req: IncomingMessage): Promise<{
   // Check for matching rules
   const rules = await storage.getRules();
 
-  console.debug("RULES", rules);
   // Find active rules first, sorted by order
   const activeRules = rules
     .filter((rule) => rule.isActive)
@@ -67,44 +108,25 @@ export async function determineTargetUrl(req: IncomingMessage): Promise<{
 
   // Look for matching rules
   for (const rule of activeRules) {
-    if (
-      rule.type === "forwarding" &&
-      ruleMatchesRequest(rule, method, urlPath)
-    ) {
-      // If we found a matching rule with a target URL, use it
-      if ("targetUrl" in rule && rule.targetUrl) {
-        targetUrl = rule.targetUrl as string;
+    const matchResult = ruleMatchesRequest(rule, method, urlPath);
+    if (matchResult.matches) {
+      targetUrl = matchResult.targetUrl || "";
+      resolvedPath = matchResult.resolvedPath || urlPath;
 
-        try {
-          hostname = new URL(targetUrl).hostname;
+      try {
+        hostname = new URL(targetUrl).hostname;
 
-          // If the rule is terminating, return immediately
-          if (rule.isTerminating) {
-            return {
-              targetUrl,
-              hostname,
-              isServerName: false,
-              resolvedPath: urlPath,
-            };
-          }
-        } catch (error) {
-          console.error(`Invalid targetUrl in rule ${rule.name}: ${targetUrl}`);
+        // If the rule is terminating, return immediately
+        if (rule.isTerminating) {
+          return {
+            targetUrl,
+            hostname,
+            isServerName: false,
+            resolvedPath,
+          };
         }
-      }
-    }
-
-    // Handle domain rules
-    if (rule.type === "domain" && isDomainLike(firstPart)) {
-      // For domain rules, rewrite to target the actual domain as hostname
-      targetUrl = `https://${firstPart}`;
-      hostname = firstPart;
-      resolvedPath = `/${restParts.join("/")}`;
-
-      console.log(`Matched domain rule: ${rule.name} -> ${targetUrl}`);
-
-      // If the rule is terminating, return immediately
-      if (rule.isTerminating) {
-        return { targetUrl, hostname, isServerName: false, resolvedPath };
+      } catch (error) {
+        console.error(`Invalid targetUrl in rule ${rule.name}: ${targetUrl}`);
       }
     }
   }

@@ -61,12 +61,6 @@ export interface BaseRule {
   description?: string;
 }
 
-// Domain rule type - matches domain patterns
-export interface DomainRule extends BaseRule {
-  type: "domain";
-  pattern: string; // Regular expression for domain matching
-}
-
 // Forward rule type - forwards requests to a target URL
 export interface ForwardingRule extends BaseRule {
   type: "forwarding";
@@ -107,11 +101,8 @@ export interface JwtPluginConfig {
   jsonProperty?: string; // Property name when responseFormat is "json"
 }
 
-export type Rule =
-  | DomainRule
-  | ForwardingRule
-  | StaticResponseRule
-  | PluginRule;
+// Union type for all rule types
+export type Rule = ForwardingRule | StaticResponseRule | PluginRule;
 
 // Legacy ProxyRule type for backward compatibility
 export type ProxyRule = {

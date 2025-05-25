@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import type { Rule, ForwardingRule, DomainRule } from "../types/proxy";
+import type { Rule, ForwardingRule } from "../types/proxy";
 
 interface RulesState {
   rules: Rule[];
@@ -33,11 +33,13 @@ const createDefaultRules = (): Rule[] => {
       "Forward all requests to a specific server. Configure the target URL to enable this rule.",
   };
 
-  const domainRule: DomainRule = {
+  const domainRule: ForwardingRule = {
     id: uuidv4(),
     name: "Domain-Specific Redirect",
-    type: "domain",
-    pattern: "(.+)/*",
+    type: "forwarding",
+    method: "GET",
+    pathPattern: "(.+)/*",
+    targetUrl: "",
     isActive: false,
     isTerminating: true,
     order: 1,
