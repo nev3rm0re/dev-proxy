@@ -230,8 +230,8 @@ export const RuleForm: React.FC<RuleFormProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+      <div className="bg-gray-900 rounded-lg w-full max-w-2xl max-h-[95vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-xl text-white">
             {title || (editMode ? "Edit Rule" : "Create New Rule")}
           </h2>
@@ -244,93 +244,92 @@ export const RuleForm: React.FC<RuleFormProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Basic Information */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                Rule Name
-              </label>
+        <form onSubmit={handleSubmit} className="p-4 space-y-3">
+          {/* Basic Information - Inline */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-400 w-24 flex-shrink-0">
+              Rule Name
+            </label>
+            <div className="flex-1">
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) =>
                   setFormData({ ...formData, name: e.target.value })
                 }
-                className={`w-full px-3 py-2 bg-gray-800 text-white rounded border ${
+                className={`w-full px-3 py-2 bg-gray-800 text-white rounded border h-9 ${
                   formErrors.name ? "border-red-500" : "border-gray-700"
                 }`}
                 placeholder="My Rule"
               />
               {formErrors.name && (
-                <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>
+                <p className="text-red-500 text-2xs mt-0.5">
+                  {formErrors.name}
+                </p>
               )}
             </div>
           </div>
-          {/* Common Fields - Method and Path */}
-          <div className="space-y-4">
-            <h3 className="text-lg text-white border-b border-gray-700 pb-2">
-              Request Matching
-            </h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  HTTP Method
-                </label>
-                <select
-                  value={
-                    typeof formData.method === "string"
-                      ? formData.method
-                      : formData.method[0] || "GET"
-                  }
-                  onChange={(e) =>
-                    setFormData({ ...formData, method: e.target.value })
-                  }
-                  className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
-                >
-                  <option value="*">ANY (*)</option>
-                  <option value="GET">GET</option>
-                  <option value="POST">POST</option>
-                  <option value="PUT">PUT</option>
-                  <option value="DELETE">DELETE</option>
-                  <option value="PATCH">PATCH</option>
-                  <option value="OPTIONS">OPTIONS</option>
-                </select>
-              </div>
+          {/* Request Matching - Section Header */}
+          <h3 className="text-lg text-white border-b border-gray-700 pb-1">
+            Request Matching
+          </h3>
 
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  Path Pattern
-                </label>
-                <input
-                  type="text"
-                  value={formData.pathPattern}
-                  onChange={(e) =>
-                    setFormData({ ...formData, pathPattern: e.target.value })
-                  }
-                  className={`w-full px-3 py-2 bg-gray-800 text-white rounded border ${
-                    formErrors.pathPattern
-                      ? "border-red-500"
-                      : "border-gray-700"
-                  }`}
-                  placeholder="/api/*"
-                />
-                {formErrors.pathPattern && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {formErrors.pathPattern}
-                  </p>
-                )}
-              </div>
+          {/* Method and Path - Inline */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-400 w-24 flex-shrink-0">
+              HTTP Method
+            </label>
+            <div className="w-32">
+              <select
+                value={
+                  typeof formData.method === "string"
+                    ? formData.method
+                    : formData.method[0] || "GET"
+                }
+                onChange={(e) =>
+                  setFormData({ ...formData, method: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 h-9"
+              >
+                <option value="*">ANY (*)</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="PATCH">PATCH</option>
+                <option value="OPTIONS">OPTIONS</option>
+              </select>
+            </div>
+            <label className="text-sm text-gray-400 w-20 flex-shrink-0">
+              Path Pattern
+            </label>
+            <div className="flex-1">
+              <input
+                type="text"
+                value={formData.pathPattern}
+                onChange={(e) =>
+                  setFormData({ ...formData, pathPattern: e.target.value })
+                }
+                className={`w-full px-3 py-2 bg-gray-800 text-white rounded border h-9 ${
+                  formErrors.pathPattern ? "border-red-500" : "border-gray-700"
+                }`}
+                placeholder="/api/*"
+              />
+              {formErrors.pathPattern && (
+                <p className="text-red-500 text-2xs mt-0.5">
+                  {formErrors.pathPattern}
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Rule Type */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                Rule Type
-              </label>
+          {/* Rule Type - Inline */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-400 w-24 flex-shrink-0">
+              Rule Type
+            </label>
+            <div className="flex-1">
               <select
                 value={formData.type}
                 onChange={(e) => {
@@ -342,13 +341,13 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                     ...(newType === "plugin" ? { pluginType: "jwt" } : {}),
                     ...(newType === "request-modifier"
                       ? { isTerminating: false }
-                      : {}), // Request modifiers are typically non-terminating
+                      : {}),
                     ...(newType === "response-modifier"
                       ? { responseModifications: {}, conditionalRules: [] }
                       : {}),
                   });
                 }}
-                className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
+                className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700 h-9"
               >
                 <option value="static">Static Response</option>
                 <option value="forwarding">Forward Requests</option>
@@ -357,91 +356,72 @@ export const RuleForm: React.FC<RuleFormProps> = ({
                 <option value="response-modifier">Response Modifier</option>
               </select>
             </div>
-            {renderRuleTypeSpecificFields()}
-
-            {formData.type === "plugin" && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">
-                  Plugin Type
-                </label>
-                <select
-                  value={formData.pluginType || "jwt"}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      pluginType: e.target.value,
-                    })
-                  }
-                  className="w-full px-3 py-2 bg-gray-800 text-white rounded border border-gray-700"
-                >
-                  <option value="jwt">JWT Generation</option>
-                </select>
-              </div>
-            )}
           </div>
 
-          {/* Advanced Options */}
-          <div className="space-y-4">
-            <h3 className="text-lg text-white border-b border-gray-700 pb-2">
-              Advanced Options
-            </h3>
+          {renderRuleTypeSpecificFields()}
 
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isTerminating}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isTerminating: e.target.checked,
-                    })
-                  }
-                  className="form-checkbox h-4 w-4"
-                />
-                <span className="text-sm text-gray-400">
-                  Terminating (stop processing rules after match)
-                </span>
-              </label>
+          {/* Advanced Options - Section Header */}
+          <h3 className="text-lg text-white border-b border-gray-700 pb-1">
+            Advanced Options
+          </h3>
+
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isTerminating}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    isTerminating: e.target.checked,
+                  })
+                }
+                className="form-checkbox h-4 w-4"
+              />
+              <span className="text-sm text-gray-400">
+                Terminating (stop processing rules after match)
+              </span>
+            </label>
+          </div>
+
+          {formData.type === "request-modifier" && formData.isTerminating && (
+            <div className="bg-amber-900/20 border border-amber-700 rounded p-2">
+              <p className="text-amber-200 text-2xs">
+                ⚠️ Request modifier rules are typically non-terminating to allow
+                the modified request to be processed by subsequent rules.
+              </p>
             </div>
+          )}
 
-            {formData.type === "request-modifier" && formData.isTerminating && (
-              <div className="bg-amber-900/20 border border-amber-700 rounded p-3">
-                <p className="text-amber-200 text-xs">
-                  ⚠️ Request modifier rules are typically non-terminating to
-                  allow the modified request to be processed by subsequent
-                  rules.
-                </p>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">
-                Description (Optional)
-              </label>
+          {/* Description - Inline */}
+          <div className="flex items-start gap-3">
+            <label className="text-sm text-gray-400 w-24 flex-shrink-0 pt-2">
+              Description
+            </label>
+            <div className="flex-1">
               <textarea
                 value={formData.description || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="w-full px-3 py-2 h-20 bg-gray-800 text-white rounded border border-gray-700"
+                className="w-full px-3 py-2 h-16 bg-gray-800 text-white rounded border border-gray-700 text-sm"
                 placeholder="Brief description of what this rule does..."
               />
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+          {/* Actions - Compact */}
+          <div className="flex justify-end gap-2 pt-3 border-t border-gray-700">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
+              className="h-9 px-4 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors text-sm"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
+              className="h-9 px-4 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-sm"
             >
               {editMode ? "Update Rule" : "Create Rule"}
             </button>
