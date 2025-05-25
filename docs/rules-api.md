@@ -607,8 +607,8 @@ Template variables provide dynamic values in rule configurations.
 
 | Variable | Description | Example Output |
 |----------|-------------|----------------|
-| `{{timestamp}}` | Current Unix timestamp | `1704067200` |
-| `{{randomId}}` | Random UUID | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
+| ```{{timestamp}}``` | Current Unix timestamp | `1704067200` |
+| ```{{randomId}}``` | Random UUID | `a1b2c3d4-e5f6-7890-abcd-ef1234567890` |
 | `{{env.VAR_NAME}}` | Environment variable | Value of `process.env.VAR_NAME` |
 | `{{userId}}` | Current user ID | `user-12345` |
 
