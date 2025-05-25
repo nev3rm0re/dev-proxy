@@ -1,0 +1,58 @@
+---
+---
+
+@import "minima";
+
+/* Custom styles for dev-proxy documentation */
+.site-header {
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.site-title {
+  font-weight: 600;
+}
+
+/* Code blocks styling */
+pre, code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Table styling */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+table th,
+table td {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+/* Improve readability */
+.post-content h2 {
+  margin-top: 2em;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.3em;
+}
+
+.post-content h3 {
+  margin-top: 1.5em;
+}
+
+/* JSON code blocks */
+.language-json {
+  background-color: #f8f8f8;
+}
+
+/* Navigation improvements */
+.site-nav .page-link {
+  margin-left: 20px;
+} 
