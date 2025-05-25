@@ -31,7 +31,6 @@ index_files:
 
 # Navigation
 header_pages:
-  - README.md
   - rules-api.md
   - use-cases.md
 

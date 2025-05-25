@@ -1,3 +1,8 @@
+---
+layout: default
+title: Use Cases & Examples
+---
+
 # Use Cases & Examples
 
 This document provides practical examples and common patterns for using dev-proxy rules in real-world scenarios.
