@@ -19,18 +19,18 @@ Dev-Proxy allows you to intercept, modify, and mock HTTP requests during develop
 ## 📖 Documentation
 
 ### Core References
-- **[Rules API Reference](./rules-api.html)** - Complete reference for all rule types and their properties
-- **[Use Cases & Examples](./use-cases.html)** - Common patterns and real-world examples
+- **[Rules API Reference](./rules-api.md)** - Complete reference for all rule types and their properties
+- **[Use Cases & Examples](./use-cases.md)** - Common patterns and real-world examples
 
 ### Rule Types Overview
 
 | Rule Type | Purpose | Terminating |
 |-----------|---------|-------------|
-| **[Static Response](./rules-api.html#static-response-rules)** | Return predefined responses | ✅ Always |
-| **[Forwarding](./rules-api.html#forwarding-rules)** | Proxy requests to upstream servers | ✅ Usually |
-| **[Plugin (JWT)](./rules-api.html#plugin-rules)** | Generate dynamic responses | ✅ Always |
-| **[Request Modifier](./rules-api.html#request-modifier-rules)** | Modify requests before processing | ❌ Usually |
-| **[Response Modifier](./rules-api.html#response-modifier-rules)** | Enhance responses from any source | ✅ Usually |
+| **[Static Response](./rules-api.md#static-response-rules)** | Return predefined responses | ✅ Always |
+| **[Forwarding](./rules-api.md#forwarding-rules)** | Proxy requests to upstream servers | ✅ Usually |
+| **[Plugin (JWT)](./rules-api.md#plugin-rules)** | Generate dynamic responses | ✅ Always |
+| **[Request Modifier](./rules-api.md#request-modifier-rules)** | Modify requests before processing | ❌ Usually |
+| **[Response Modifier](./rules-api.md#response-modifier-rules)** | Enhance responses from any source | ✅ Usually |
 
 ## 🚀 Common Use Cases
 
@@ -45,7 +45,7 @@ Dev-Proxy allows you to intercept, modify, and mock HTTP requests during develop
   "responseBody": "{\"users\": [{\"id\": 1, \"name\": \"Alice\"}]}"
 }
 ```
-[→ More API mocking examples](./use-cases.html#api-mocking--testing)
+[→ More API mocking examples](./use-cases.md#api-mocking--testing)
 
 ### Environment Routing
 ```json
@@ -57,7 +57,7 @@ Dev-Proxy allows you to intercept, modify, and mock HTTP requests during develop
   "targetUrl": "https://api-$1.example.com/$2"
 }
 ```
-[→ More routing examples](./use-cases.html#development-environment-routing)
+[→ More routing examples](./use-cases.md#development-environment-routing)
 
 ### JWT Token Generation
 ```json
@@ -74,7 +74,7 @@ Dev-Proxy allows you to intercept, modify, and mock HTTP requests during develop
   }
 }
 ```
-[→ More JWT examples](./use-cases.html#authentication--jwt-generation)
+[→ More JWT examples](./use-cases.md#authentication--jwt-generation)
 
 ### Request Enhancement
 ```json
@@ -90,7 +90,7 @@ Dev-Proxy allows you to intercept, modify, and mock HTTP requests during develop
   "isTerminating": false
 }
 ```
-[→ More transformation examples](./use-cases.html#requestresponse-transformation)
+[→ More transformation examples](./use-cases.md#requestresponse-transformation)
 
 ## ✨ Key Features
 
@@ -139,8 +139,8 @@ dev-proxy/
 
 ## 📚 Learn More
 
-- **[Complete Rules API Reference](./rules-api.html)** - Detailed documentation for all rule types
-- **[Use Cases & Examples](./use-cases.html)** - Practical examples and patterns
+- **[Complete Rules API Reference](./rules-api.md)** - Detailed documentation for all rule types
+- **[Use Cases & Examples](./use-cases.md)** - Practical examples and patterns
 - **[GitHub Repository](https://github.com/nev3rm0re/dev-proxy)** - Source code and issues
 
 ---

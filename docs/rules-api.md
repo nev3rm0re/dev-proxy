@@ -1,8 +1,3 @@
----
-layout: default
-title: Rules API Reference
----
-
 # Rules API Reference
 
 This document provides a complete reference for all rule types available in dev-proxy. Each rule type has specific properties and behaviors that determine how requests are processed.
